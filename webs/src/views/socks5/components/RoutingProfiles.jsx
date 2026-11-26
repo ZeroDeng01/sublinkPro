@@ -27,9 +27,8 @@ import {
   createSocks5RoutingProfile,
   deleteSocks5RoutingProfile,
   getSocks5RoutingProfiles,
-  getSocks5Settings,
   updateSocks5RoutingProfile
-} from 'api/settings';
+} from 'api/proxyGateway';
 
 import CandidateNodePool from './CandidateNodePool';
 import SpecificNodeSelector from './SpecificNodeSelector';
@@ -65,9 +64,9 @@ function errorMessage(t, error) {
 export default function RoutingProfiles({ showMessage, onChanged }) {
   const { t } = useTranslation();
   const [profiles, setProfiles] = useState([]);
-  const [baseUsername, setBaseUsername] = useState('proxy');
-  const [authenticationEnabled, setAuthenticationEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [deleting, setDeleting] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingID, setEditingID] = useState('');
   const [form, setForm] = useState(emptyProfile);
@@ -75,17 +74,16 @@ export default function RoutingProfiles({ showMessage, onChanged }) {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
-      const [profilesResponse, settingsResponse] = await Promise.all([getSocks5RoutingProfiles(), getSocks5Settings()]);
+      const profilesResponse = await getSocks5RoutingProfiles();
       setProfiles(Array.isArray(profilesResponse.data) ? profilesResponse.data : []);
-      setBaseUsername(settingsResponse.data?.username || 'proxy');
-      setAuthenticationEnabled(Boolean(settingsResponse.data?.requireAuth));
     } catch (error) {
-      showMessage(errorMessage(t, error), 'error');
+      setLoadError(errorMessage(t, error));
     } finally {
       setLoading(false);
     }
-  }, [showMessage, t]);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -145,6 +143,7 @@ export default function RoutingProfiles({ showMessage, onChanged }) {
 
   const remove = async (profile) => {
     if (!window.confirm(t('settings.socks5.profiles.deleteConfirm', { name: profile.name }))) return;
+    setDeleting(profile.id);
     try {
       await deleteSocks5RoutingProfile(profile.id);
       showMessage(t('settings.socks5.profiles.messages.deleted'));
@@ -152,6 +151,8 @@ export default function RoutingProfiles({ showMessage, onChanged }) {
       onChanged?.();
     } catch (error) {
       showMessage(errorMessage(t, error), 'error');
+    } finally {
+      setDeleting('');
     }
   };
 
@@ -171,74 +172,90 @@ export default function RoutingProfiles({ showMessage, onChanged }) {
 
   return (
     <>
-      <Card variant="outlined" sx={{ mt: 2 }}>
+      <Card variant="outlined">
         <CardHeader
-          title={t('settings.socks5.profiles.title')}
-          subheader={t('settings.socks5.profiles.subheader')}
+          sx={{
+            flexWrap: 'wrap',
+            gap: 1,
+            '& .MuiCardHeader-content': { minWidth: 0, flexBasis: { xs: '100%', sm: 'auto' } },
+            '& .MuiCardHeader-action': { m: 0, alignSelf: 'center' }
+          }}
+          title={t('settings.socks5.page.customProfiles')}
+          subheader={t('settings.socks5.page.customProfilesHelp')}
           action={
-            <Button variant="contained" onClick={openCreate} disabled={loading}>
+            <Button variant="contained" onClick={openCreate} disabled={loading || Boolean(loadError) || Boolean(deleting)}>
               {t('settings.socks5.profiles.create')}
             </Button>
           }
         />
-        <CardContent>
-          <Alert severity={authenticationEnabled ? 'info' : 'warning'} sx={{ mb: 2 }}>
-            {t(authenticationEnabled ? 'settings.socks5.profiles.usernameHint' : 'settings.socks5.profiles.authenticationRequired', {
-              username: baseUsername
-            })}
-          </Alert>
+        <CardContent sx={{ pt: 0 }}>
+          {loadError && (
+            <Alert
+              severity="error"
+              sx={{ mb: 1.5 }}
+              action={
+                <Button color="inherit" size="small" onClick={load}>
+                  {t('settings.socks5.page.retry')}
+                </Button>
+              }
+            >
+              {loadError}
+            </Alert>
+          )}
+          {loading && (
+            <Typography role="status" color="text.secondary">
+              {t('settings.socks5.page.loading')}
+            </Typography>
+          )}
           <Stack spacing={1.25}>
-            {profiles.map((profile) => {
-              const filters = [
-                ...(profile.candidateGroups || []),
-                ...(profile.candidateSources || []),
-                ...(profile.candidateProtocols || []),
-                ...(profile.candidateCountries || [])
-              ];
-              return (
-                <Box key={profile.id} sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1.5 }}>
-                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ md: 'center' }}>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
-                        <Typography variant="subtitle1">{profile.name}</Typography>
-                        <Chip size="small" label={profile.id} />
-                        <Chip
-                          size="small"
-                          color={profile.enabled ? 'success' : 'default'}
-                          label={t(profile.enabled ? 'common.enabled' : 'common.disabled')}
-                        />
-                        {profile.isDefault && <Chip size="small" color="primary" label={t('settings.socks5.profiles.default')} />}
-                      </Stack>
-                      <Typography variant="body2" color="text.secondary">
-                        {t('settings.socks5.profiles.summary', {
-                          selection: t(
-                            `settings.socks5.form.selection${profile.selection === 'round_robin' ? 'RoundRobin' : profile.selection.charAt(0).toUpperCase() + profile.selection.slice(1)}`
-                          ),
-                          attempts: profile.maxAttempts,
-                          candidates: profile.candidateCount ?? 0,
-                          filters: filters.length
-                        })}
-                      </Typography>
-                      {!profile.isDefault && (
-                        <Typography variant="caption" color="text.secondary">
-                          {baseUsername}@{profile.id}.account
+            {!loading && !loadError && !profiles.some((profile) => !profile.isDefault) && (
+              <Typography color="text.secondary">{t('settings.socks5.page.profilesEmpty')}</Typography>
+            )}
+            {profiles
+              .filter((profile) => !profile.isDefault)
+              .map((profile) => {
+                const filters = [
+                  ...(profile.candidateGroups || []),
+                  ...(profile.candidateSources || []),
+                  ...(profile.candidateProtocols || []),
+                  ...(profile.candidateCountries || [])
+                ];
+                return (
+                  <Box key={profile.id} sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1.5 }}>
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ md: 'center' }}>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                          <Typography variant="subtitle1">{profile.name}</Typography>
+                          <Chip size="small" label={profile.id} />
+                          <Chip
+                            size="small"
+                            color={profile.enabled ? 'success' : 'default'}
+                            label={t(profile.enabled ? 'common.enabled' : 'common.disabled')}
+                          />
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary">
+                          {t('settings.socks5.profiles.summary', {
+                            selection: t(
+                              `settings.socks5.form.selection${profile.selection === 'round_robin' ? 'RoundRobin' : profile.selection.charAt(0).toUpperCase() + profile.selection.slice(1)}`
+                            ),
+                            attempts: profile.maxAttempts,
+                            candidates: profile.candidateCount ?? 0,
+                            filters: filters.length
+                          })}
                         </Typography>
-                      )}
-                    </Box>
-                    {!profile.isDefault && (
+                      </Box>
                       <Stack direction="row" spacing={1}>
-                        <Button size="small" onClick={() => openEdit(profile)}>
+                        <Button size="small" disabled={loading || Boolean(deleting)} onClick={() => openEdit(profile)}>
                           {t('common.edit')}
                         </Button>
-                        <Button size="small" color="error" onClick={() => remove(profile)}>
+                        <Button size="small" color="error" disabled={Boolean(deleting)} onClick={() => remove(profile)}>
                           {t('common.delete')}
                         </Button>
                       </Stack>
-                    )}
-                  </Stack>
-                </Box>
-              );
-            })}
+                    </Stack>
+                  </Box>
+                );
+              })}
           </Stack>
         </CardContent>
       </Card>
@@ -246,7 +263,10 @@ export default function RoutingProfiles({ showMessage, onChanged }) {
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="md">
         <DialogTitle>{t(editingID ? 'settings.socks5.profiles.editTitle' : 'settings.socks5.profiles.createTitle')}</DialogTitle>
         <DialogContent dividers>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('settings.socks5.page.applyImmediately')}
+            </Typography>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
               <TextField
                 fullWidth

@@ -1,15 +1,22 @@
 package api
 
 import (
+	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
+
 	"sublink/models"
 	socks5service "sublink/services/socks5"
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
 )
+
+// Serialize configuration updates with listener lifecycle actions and store reloads.
+var proxyGatewayWriteMu sync.Mutex
 
 func requireSocks5Admin(c *gin.Context) bool {
 	username, ok := currentUsernameFromContext(c)
@@ -41,6 +48,8 @@ func UpdateSocks5Settings(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	var req struct {
 		Enabled                      bool      `json:"enabled"`
 		ListenAddress                string    `json:"listenAddress"`
@@ -195,25 +204,77 @@ func UpdateSocks5Settings(c *gin.Context) {
 		return
 	}
 	if err := socks5service.DefaultManager().Apply(cfg); err != nil {
-		utils.FailWithI18n(c, "启动 SOCKS5 服务失败: "+err.Error(), "settings.socks5.api.startFailed", map[string]any{"message": err.Error()})
+		running, bound := socks5service.DefaultManager().Status()
+		utils.FailWithDataI18n(c, "设置已保存，但应用失败: "+err.Error(),
+			gin.H{"settings": socks5service.ToPublicConfig(cfg, running, bound)},
+			"settings.socks5.api.applyFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	running, bound := socks5service.DefaultManager().Status()
 	utils.OkDetailedI18n(c, "SOCKS5 设置已保存", socks5service.ToPublicConfig(cfg, running, bound), "settings.socks5.api.saved", nil)
 }
 
+type proxyGatewayStatus struct {
+	Enabled   bool                           `json:"enabled"`
+	Running   bool                           `json:"running"`
+	Listeners []socks5service.ListenerStatus `json:"listeners"`
+	Stats     socks5service.GatewaySnapshot  `json:"stats"`
+	Health    socks5service.HealthSummary    `json:"health"`
+}
+
+func gatewayStatus(cfg socks5service.Config) proxyGatewayStatus {
+	manager := socks5service.DefaultManager()
+	listeners := manager.ListenerStatuses()
+	return proxyGatewayStatus{
+		Enabled: cfg.Enabled, Listeners: listeners, Stats: manager.GatewaySnapshot(), Health: manager.HealthSummary(),
+		Running: slices.ContainsFunc(listeners, func(listener socks5service.ListenerStatus) bool { return listener.Running }),
+	}
+}
+
+func StartProxyGateway(c *gin.Context) {
+	if !requireSocks5Admin(c) {
+		return
+	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
+	cfg, err := socks5service.LoadConfig()
+	if err != nil {
+		utils.FailWithI18n(c, "读取代理网关设置失败: "+err.Error(), "settings.socks5.api.loadFailed", nil)
+		return
+	}
+	if !cfg.Enabled {
+		utils.FailWithI18n(c, "请先启用代理网关并保存设置", "settings.socks5.api.gatewayDisabled", nil)
+		return
+	}
+	listeners, err := socks5service.LoadListeners(cfg)
+	if err != nil {
+		utils.FailWithI18n(c, "读取监听入口失败: "+err.Error(), "settings.socks5.api.listenerLoadFailed", map[string]any{"message": err.Error()})
+		return
+	}
+	if !slices.ContainsFunc(listeners, func(listener socks5service.ListenerSpec) bool { return listener.Enabled }) {
+		utils.FailWithI18n(c, "请先启用至少一个监听入口", "settings.socks5.api.noEnabledListeners", nil)
+		return
+	}
+	if err := socks5service.DefaultManager().ApplyListeners(cfg, listeners); err != nil {
+		utils.FailWithI18n(c, "启动代理网关失败: "+err.Error(), "settings.socks5.api.startFailed", map[string]any{"message": err.Error()})
+		return
+	}
+	utils.OkDetailedI18n(c, "代理网关已启动", gatewayStatus(cfg), "settings.socks5.api.started", nil)
+}
+
 func StopSocks5(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	socks5service.DefaultManager().Stop()
 	cfg, err := socks5service.LoadConfig()
 	if err != nil {
 		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	running, bound := socks5service.DefaultManager().Status()
-	utils.OkDetailedI18n(c, "SOCKS5 服务已停止", socks5service.ToPublicConfig(cfg, running, bound), "settings.socks5.api.stopped", nil)
+	utils.OkDetailedI18n(c, "代理网关已停止", gatewayStatus(cfg), "settings.socks5.api.stopped", nil)
 }
 
 func GetSocks5Status(c *gin.Context) {
@@ -225,8 +286,14 @@ func GetSocks5Status(c *gin.Context) {
 		utils.FailWithI18n(c, "读取 SOCKS5 设置失败: "+err.Error(), "settings.socks5.api.loadFailed", map[string]any{"message": err.Error()})
 		return
 	}
-	running, bound := socks5service.DefaultManager().Status()
-	utils.OkDetailedI18n(c, "SOCKS5 状态已加载", gin.H{"config": socks5service.ToPublicConfig(cfg, running, bound), "listeners": socks5service.DefaultManager().ListenerStatuses(), "stats": socks5service.DefaultManager().GatewaySnapshot(), "health": socks5service.DefaultManager().HealthSnapshot()}, "settings.socks5.api.statusLoaded", nil)
+	utils.OkDetailedI18n(c, "代理网关状态已加载", gatewayStatus(cfg), "settings.socks5.api.statusLoaded", nil)
+}
+
+func GetProxyGatewayHealth(c *gin.Context) {
+	if !requireSocks5Admin(c) {
+		return
+	}
+	utils.OkDetailedI18n(c, "节点健康状态已加载", socks5service.DefaultManager().HealthSnapshot(), "settings.socks5.api.healthLoaded", nil)
 }
 
 type socks5RoutingProfileRequest struct {
@@ -286,6 +353,8 @@ func CreateSocks5RoutingProfile(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	var req socks5RoutingProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithI18n(c, "参数错误: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
@@ -312,6 +381,8 @@ func UpdateSocks5RoutingProfile(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
 		utils.FailWithI18n(c, "SOCKS5 路由配置 ID 无效", "settings.socks5.api.invalidProfile", nil)
@@ -343,6 +414,8 @@ func DeleteSocks5RoutingProfile(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
 		utils.FailWithI18n(c, "SOCKS5 路由配置 ID 无效", "settings.socks5.api.invalidProfile", nil)
@@ -412,6 +485,8 @@ func CreateSocks5Listener(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	var req socks5ListenerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithI18n(c, "参数错误: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
@@ -444,6 +519,8 @@ func UpdateSocks5Listener(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
 		utils.FailWithI18n(c, "SOCKS5 监听器 ID 无效", "settings.socks5.api.invalidListener", nil)
@@ -493,6 +570,8 @@ func DeleteSocks5Listener(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
 		utils.FailWithI18n(c, "SOCKS5 监听器 ID 无效", "settings.socks5.api.invalidListener", nil)
@@ -564,6 +643,8 @@ func CreateSocks5Account(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	var req socks5AccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FailWithI18n(c, "参数错误: "+err.Error(), "settings.socks5.api.invalidRequest", nil)
@@ -590,6 +671,8 @@ func UpdateSocks5Account(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
 		utils.FailWithI18n(c, "SOCKS5 账号 ID 无效", "settings.socks5.api.invalidAccount", nil)
@@ -633,6 +716,8 @@ func DeleteSocks5Account(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" || len(id) > 32 {
 		utils.FailWithI18n(c, "SOCKS5 账号 ID 无效", "settings.socks5.api.invalidAccount", nil)
@@ -661,20 +746,40 @@ func GetSocks5RoutingSnapshot(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "25"))
 	snapshot, err := socks5service.DefaultManager().RoutingSnapshot(socks5service.RoutingSnapshotQuery{
+		ListenerID: c.Query("listenerId"), AllProfiles: c.Query("allProfiles") == "true",
 		ProfileID: c.Query("profileId"), Keyword: c.Query("keyword"), Status: c.Query("status"), SortBy: c.Query("sortBy"),
 		SortOrder: c.Query("sortOrder"), Page: page, PageSize: pageSize,
 	})
 	if err != nil {
+		if errors.Is(err, socks5service.ErrListenerNotRunning) {
+			utils.FailWithCodeI18n(c, http.StatusNotFound, "监听入口未运行", "settings.socks5.api.monitorListenerUnavailable", nil)
+			return
+		}
 		utils.FailWithI18n(c, "读取 SOCKS5 节点路由统计失败: "+err.Error(), "settings.socks5.api.routingLoadFailed", map[string]any{"message": err.Error()})
 		return
 	}
 	utils.OkDetailedI18n(c, "SOCKS5 节点路由统计已加载", snapshot, "settings.socks5.api.routingLoaded", nil)
 }
 
+func ResetProxyGatewayStats(c *gin.Context) {
+	if !requireSocks5Admin(c) {
+		return
+	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
+	if !socks5service.DefaultManager().ResetGatewayStats() {
+		utils.FailWithCodeI18n(c, http.StatusConflict, "代理网关未运行", "settings.socks5.api.monitorGatewayUnavailable", nil)
+		return
+	}
+	utils.OkDetailedI18n(c, "网关累计已重置", nil, "settings.socks5.monitor.gatewayStatsReset", nil)
+}
+
 func ResetSocks5RuntimeStats(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
+	proxyGatewayWriteMu.Lock()
+	defer proxyGatewayWriteMu.Unlock()
 	socks5service.DefaultManager().ResetNodeRuntimeStats()
 	utils.OkDetailedI18n(c, "SOCKS5 节点运行统计已重置", nil, "settings.socks5.api.runtimeReset", nil)
 }
@@ -715,7 +820,15 @@ func ProbeSocks5Health(c *gin.Context) {
 	if !requireSocks5Admin(c) {
 		return
 	}
-	started, available := socks5service.DefaultManager().TriggerHealthProbe()
+	started, available, err := socks5service.DefaultManager().TriggerHealthProbe(c.Query("listenerId"), c.Query("profileId"))
+	if errors.Is(err, socks5service.ErrListenerNotRunning) {
+		utils.FailWithCodeI18n(c, http.StatusNotFound, "监听入口未运行", "settings.socks5.api.monitorListenerUnavailable", nil)
+		return
+	}
+	if err != nil {
+		utils.FailWithI18n(c, "无法读取探测候选节点: "+err.Error(), "settings.socks5.api.routingLoadFailed", map[string]any{"message": err.Error()})
+		return
+	}
 	if !available {
 		utils.FailWithI18n(c, "SOCKS5 健康探测未启动，服务尚未运行", "settings.socks5.api.healthProbeUnavailable", nil)
 		return

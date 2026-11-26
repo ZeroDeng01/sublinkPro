@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Autocomplete from '@mui/material/Autocomplete';
@@ -28,8 +28,9 @@ function mergeNodes(current, incoming) {
   return Array.from(merged.values());
 }
 
-export default function SpecificNodeSelector({ value, onChange, disabled = false, error = false }) {
+export default function SpecificNodeSelector({ inputId, value, onChange, disabled = false, error = false }) {
   const { t } = useTranslation();
+  const groupLabelId = useId();
   const [nodes, setNodes] = useState([]);
   const [groups, setGroups] = useState([]);
   const [group, setGroup] = useState('');
@@ -146,8 +147,9 @@ export default function SpecificNodeSelector({ value, onChange, disabled = false
   return (
     <Stack spacing={1.25}>
       <FormControl fullWidth>
-        <InputLabel>{t('settings.socks5.form.nodeGroup')}</InputLabel>
+        <InputLabel id={groupLabelId}>{t('settings.socks5.form.nodeGroup')}</InputLabel>
         <Select
+          labelId={groupLabelId}
           label={t('settings.socks5.form.nodeGroup')}
           value={group}
           onChange={(event) => setGroup(event.target.value)}
@@ -162,6 +164,7 @@ export default function SpecificNodeSelector({ value, onChange, disabled = false
         </Select>
       </FormControl>
       <Autocomplete
+        id={inputId}
         fullWidth
         options={nodes}
         value={selectedNode}

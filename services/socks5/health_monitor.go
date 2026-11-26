@@ -21,6 +21,7 @@ const (
 type HealthProbeFunc func(ctx context.Context, node models.Node, timeout time.Duration) (int, error)
 
 type NodeHealthSnapshot struct {
+	ListenerID          string     `json:"listenerId,omitempty"`
 	NodeID              int        `json:"nodeId"`
 	NodeName            string     `json:"nodeName"`
 	Status              string     `json:"status"`
@@ -33,17 +34,97 @@ type NodeHealthSnapshot struct {
 	LastError           string     `json:"lastError,omitempty"`
 }
 
+type HealthSummary struct {
+	Running        bool       `json:"running"`
+	LastSweepAt    *time.Time `json:"lastSweepAt,omitempty"`
+	NextSweepAt    *time.Time `json:"nextSweepAt,omitempty"`
+	HealthyNodes   int        `json:"healthyNodes"`
+	UnhealthyNodes int        `json:"unhealthyNodes"`
+	CheckingNodes  int        `json:"checkingNodes"`
+	UnknownNodes   int        `json:"unknownNodes"`
+	TotalNodes     int        `json:"totalNodes"`
+}
+
 type HealthSnapshot struct {
-	Running        bool                 `json:"running"`
-	LastSweepAt    *time.Time           `json:"lastSweepAt,omitempty"`
-	NextSweepAt    *time.Time           `json:"nextSweepAt,omitempty"`
-	HealthyNodes   int                  `json:"healthyNodes"`
-	UnhealthyNodes int                  `json:"unhealthyNodes"`
-	CheckingNodes  int                  `json:"checkingNodes"`
-	UnknownNodes   int                  `json:"unknownNodes"`
-	TotalNodes     int                  `json:"totalNodes"`
-	Truncated      bool                 `json:"truncated"`
-	Nodes          []NodeHealthSnapshot `json:"nodes"`
+	HealthSummary
+	Truncated bool                 `json:"truncated"`
+	Nodes     []NodeHealthSnapshot `json:"nodes"`
+}
+
+func (summary *HealthSummary) count(status string) {
+	summary.TotalNodes++
+	switch status {
+	case "healthy":
+		summary.HealthyNodes++
+	case "unhealthy":
+		summary.UnhealthyNodes++
+	case "checking":
+		summary.CheckingNodes++
+	default:
+		summary.UnknownNodes++
+	}
+}
+
+func monitoringHealthRank(state nodeHealthState, now time.Time) int {
+	if state.ExcludeFromRouting || state.CooldownUntil.After(now) {
+		return 0
+	}
+	switch state.Status {
+	case "healthy":
+		return 4
+	case "checking":
+		return 3
+	case "unhealthy":
+		return 1
+	default:
+		return 2
+	}
+}
+
+func preferMonitoringHealth(candidate, current nodeHealthState, now time.Time) bool {
+	// A reported failure is more informative than a listener with no observation yet.
+	if candidate.NodeID == 0 || current.NodeID == 0 {
+		return candidate.NodeID != 0
+	}
+	next, previous := monitoringHealthRank(candidate, now), monitoringHealthRank(current, now)
+	if next != previous {
+		return next > previous
+	}
+	return candidate.LastCheckedAt.After(current.LastCheckedAt)
+}
+
+type listenerHealthState struct {
+	state      nodeHealthState
+	listenerID string
+}
+
+func (m *Manager) collectHealth() (HealthSummary, map[string]listenerHealthState) {
+	var summary HealthSummary
+	nodes := make(map[string]listenerHealthState)
+	for _, runtime := range m.runtimeSnapshot() {
+		schedule := runtime.server.probeSchedule()
+		summary.Running = summary.Running || schedule.Running
+		if schedule.LastSweepAt != nil && (summary.LastSweepAt == nil || schedule.LastSweepAt.After(*summary.LastSweepAt)) {
+			summary.LastSweepAt = schedule.LastSweepAt
+		}
+		if schedule.NextSweepAt != nil && (summary.NextSweepAt == nil || schedule.NextSweepAt.Before(*summary.NextSweepAt)) {
+			summary.NextSweepAt = schedule.NextSweepAt
+		}
+		health := runtime.server.router.health
+		now := health.now()
+		health.mu.Lock()
+		for key, state := range health.states {
+			previous, found := nodes[key]
+			if !found || preferMonitoringHealth(*state, previous.state, now) {
+				nodes[key] = listenerHealthState{state: *state, listenerID: runtime.spec.ID}
+			}
+		}
+		health.mu.Unlock()
+	}
+	for _, node := range nodes {
+		summary.count(node.state.Status)
+	}
+	return summary, nodes
 }
 
 func sanitizeHealthError(message string) string {
@@ -81,25 +162,32 @@ func (h *nodeHealth) snapshot() []NodeHealthSnapshot {
 	now := h.now()
 	result := make([]NodeHealthSnapshot, 0, len(h.states))
 	for _, state := range h.states {
-		cooldownUntil := state.CooldownUntil
-		if !cooldownUntil.IsZero() && !cooldownUntil.After(now) {
-			cooldownUntil = time.Time{}
-		}
-		result = append(result, NodeHealthSnapshot{
-			NodeID: state.NodeID, NodeName: state.NodeName, Status: state.Status, LatencyMs: state.LatencyMs,
-			LastCheckedAt: timePointer(state.LastCheckedAt), LastSuccessAt: timePointer(state.LastSuccessAt),
-			LastFailureAt: timePointer(state.LastFailureAt), ConsecutiveFailures: state.ConsecutiveFailures,
-			CooldownUntil: timePointer(cooldownUntil), LastError: state.LastError,
-		})
+		result = append(result, state.snapshot(now))
 	}
 	h.mu.Unlock()
-	sort.Slice(result, func(i, j int) bool {
-		if result[i].NodeName == result[j].NodeName {
-			return result[i].NodeID < result[j].NodeID
-		}
-		return result[i].NodeName < result[j].NodeName
-	})
+	sortHealthSnapshots(result)
 	return result
+}
+
+func (h nodeHealthState) snapshot(now time.Time) NodeHealthSnapshot {
+	result := NodeHealthSnapshot{
+		NodeID: h.NodeID, NodeName: h.NodeName, Status: h.Status, LatencyMs: h.LatencyMs,
+		LastCheckedAt: timePointer(h.LastCheckedAt), LastSuccessAt: timePointer(h.LastSuccessAt),
+		LastFailureAt: timePointer(h.LastFailureAt), ConsecutiveFailures: h.ConsecutiveFailures, LastError: h.LastError,
+	}
+	if h.CooldownUntil.After(now) {
+		result.CooldownUntil = timePointer(h.CooldownUntil)
+	}
+	return result
+}
+
+func sortHealthSnapshots(nodes []NodeHealthSnapshot) {
+	sort.Slice(nodes, func(i, j int) bool {
+		if nodes[i].NodeName == nodes[j].NodeName {
+			return nodes[i].NodeID < nodes[j].NodeID
+		}
+		return nodes[i].NodeName < nodes[j].NodeName
+	})
 }
 
 type healthSweepState struct {
@@ -149,6 +237,10 @@ func (s *Server) startHealthLoop(ctx context.Context) {
 }
 
 func (s *Server) triggerHealthProbe() (started bool, available bool) {
+	return s.triggerHealthProbeFor(nil, false)
+}
+
+func (s *Server) triggerHealthProbeFor(nodes []models.Node, partial bool) (started bool, available bool) {
 	s.healthSweep.mu.Lock()
 	if s.healthSweep.stopping || s.healthSweep.ctx == nil || s.healthSweep.ctx.Err() != nil {
 		s.healthSweep.mu.Unlock()
@@ -163,7 +255,7 @@ func (s *Server) triggerHealthProbe() (started bool, available bool) {
 	s.healthSweep.nextSweepAt = time.Time{}
 	s.healthSweep.done = make(chan struct{})
 	s.healthSweep.mu.Unlock()
-	go s.runHealthSweep(ctx)
+	go s.runHealthSweep(ctx, nodes, partial)
 	return true, true
 }
 
@@ -187,7 +279,7 @@ func (s *Server) stopHealthChecks() {
 	}
 }
 
-func (s *Server) runHealthSweep(ctx context.Context) {
+func (s *Server) runHealthSweep(ctx context.Context, nodes []models.Node, partial bool) {
 	defer func() {
 		now := time.Now()
 		s.healthSweep.mu.Lock()
@@ -203,12 +295,16 @@ func (s *Server) runHealthSweep(ctx context.Context) {
 		s.healthSweep.mu.Unlock()
 	}()
 
-	nodes := s.allProfileCandidateNodes()
+	if !partial {
+		nodes = s.allProfileCandidateNodes()
+	}
 	if len(nodes) == 0 {
 		return
 	}
-	s.router.health.retain(nodes)
-	s.router.runtime.retain(nodes)
+	if !partial {
+		s.router.health.retain(nodes)
+		s.router.runtime.retain(nodes)
+	}
 	jobs := make(chan models.Node)
 	var wg sync.WaitGroup
 	workers := healthProbeConcurrency
@@ -272,25 +368,31 @@ func (s *Server) defaultHealthProbe(ctx context.Context, node models.Node, _ tim
 	return int(delay), nil
 }
 
-func (s *Server) HealthSnapshot() HealthSnapshot {
+func (s *Server) probeSchedule() HealthSummary {
 	s.healthSweep.mu.Lock()
-	running := s.healthSweep.running
-	lastSweepAt := timePointer(s.healthSweep.lastSweepAt)
-	nextSweepAt := timePointer(s.healthSweep.nextSweepAt)
-	s.healthSweep.mu.Unlock()
+	defer s.healthSweep.mu.Unlock()
+	return HealthSummary{
+		Running: s.healthSweep.running, LastSweepAt: timePointer(s.healthSweep.lastSweepAt),
+		NextSweepAt: timePointer(s.healthSweep.nextSweepAt),
+	}
+}
+
+func (s *Server) HealthSummary() HealthSummary {
+	result := s.probeSchedule()
+	health := s.router.health
+	health.mu.Lock()
+	defer health.mu.Unlock()
+	for _, state := range health.states {
+		result.count(state.Status)
+	}
+	return result
+}
+
+func (s *Server) HealthSnapshot() HealthSnapshot {
+	result := HealthSnapshot{HealthSummary: s.probeSchedule()}
 	nodes := s.router.health.snapshot()
-	result := HealthSnapshot{Running: running, LastSweepAt: lastSweepAt, NextSweepAt: nextSweepAt, TotalNodes: len(nodes)}
 	for _, node := range nodes {
-		switch node.Status {
-		case "healthy":
-			result.HealthyNodes++
-		case "unhealthy":
-			result.UnhealthyNodes++
-		case "checking":
-			result.CheckingNodes++
-		default:
-			result.UnknownNodes++
-		}
+		result.count(node.Status)
 	}
 	if len(nodes) > healthSnapshotNodeLimit {
 		result.Nodes = nodes[:healthSnapshotNodeLimit]

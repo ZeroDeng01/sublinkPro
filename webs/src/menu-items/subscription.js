@@ -164,11 +164,11 @@ const system = {
       breadcrumbs: true
     },
     {
-      id: 'socks5-gateway',
+      id: 'proxy-gateway',
       title: 'Proxy Gateway',
       titleKey: 'navigation.items.socks5',
       type: 'item',
-      url: '/system/socks5',
+      url: '/system/proxy-gateway',
       icon: IconNetwork,
       breadcrumbs: true,
       adminOnly: true

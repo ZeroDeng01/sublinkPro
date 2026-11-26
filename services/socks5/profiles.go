@@ -136,7 +136,7 @@ func normalizeRoutingProfile(base Config, profile RoutingProfile) (RoutingProfil
 		profile.StickySessionTTLSeconds = base.StickySessionTTLSeconds
 	}
 	cfg := profile.apply(base)
-	normalized, err := NormalizeConfig(cfg)
+	normalized, err := normalizeGatewayConfig(cfg)
 	if err != nil {
 		return profile, err
 	}
@@ -436,6 +436,47 @@ func (s *Server) candidateNodesForProfile(id string) (RoutingProfile, []models.N
 		return profile, nil, err
 	}
 	return profile, nodes, nil
+}
+
+func (s *routingProfileStore) monitoringCandidates() ([]models.Node, error) {
+	var model models.Node
+	pool, err := model.ListWithFilters(models.NodeFilter{})
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[int]models.Node, len(pool))
+	for _, node := range pool {
+		byID[node.ID] = node
+	}
+
+	seen := make(map[int]bool, len(pool))
+	candidates := make([]models.Node, 0, len(pool))
+	add := func(node models.Node) {
+		if strings.TrimSpace(node.Link) != "" && !seen[node.ID] {
+			seen[node.ID] = true
+			candidates = append(candidates, node)
+		}
+	}
+	for _, profile := range s.enabled() {
+		_, cfg, ok := s.resolve(profile.ID)
+		if !ok {
+			continue
+		}
+		if cfg.Selection == "specific" {
+			node, found := byID[cfg.NodeID]
+			if !found || strings.TrimSpace(node.Link) == "" {
+				continue
+			}
+			add(node)
+			if !cfg.SpecificFallback {
+				continue
+			}
+		}
+		for _, node := range filterCandidatePool(pool, cfg) {
+			add(node)
+		}
+	}
+	return candidates, nil
 }
 
 func (s *Server) allProfileCandidateNodes() []models.Node {

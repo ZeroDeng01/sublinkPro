@@ -41,8 +41,9 @@ type ListenerSpec struct {
 
 type ListenerStatus struct {
 	ListenerSpec
-	Running      bool   `json:"running"`
-	BoundAddress string `json:"boundAddress,omitempty"`
+	Running              bool   `json:"running"`
+	BoundAddress         string `json:"boundAddress,omitempty"`
+	EffectiveRequireAuth *bool  `json:"effectiveRequireAuth,omitempty"`
 }
 
 func legacyListener(base Config) ListenerSpec {

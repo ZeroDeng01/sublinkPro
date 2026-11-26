@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 // project imports
 import MainLayout from 'layout/MainLayout';
@@ -26,7 +26,12 @@ const CountryRulesPage = Loadable(lazy(() => import('views/country-rules')));
 const WebhookList = Loadable(lazy(() => import('views/webhooks')));
 const AirportList = Loadable(lazy(() => import('views/airports')));
 const NodeCheckList = Loadable(lazy(() => import('views/node-check')));
-const Socks5GatewayPage = Loadable(lazy(() => import('views/socks5')));
+const ProxyGatewayPage = Loadable(lazy(() => import('views/socks5')));
+
+function ProxyGatewayBookmark() {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: '/system/proxy-gateway', search, hash }} replace />;
+}
 // ==============================|| MAIN ROUTING ||==============================  //
 
 const MainRoutes = {
@@ -132,7 +137,11 @@ const MainRoutes = {
         },
         {
           path: 'socks5',
-          element: <Socks5GatewayPage />
+          element: <ProxyGatewayBookmark />
+        },
+        {
+          path: 'proxy-gateway',
+          element: <ProxyGatewayPage />
         }
       ]
     }

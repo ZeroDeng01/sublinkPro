@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -21,7 +22,13 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { createSocks5Account, deleteSocks5Account, getSocks5Accounts, getSocks5RoutingProfiles, updateSocks5Account } from 'api/settings';
+import {
+  createSocks5Account,
+  deleteSocks5Account,
+  getSocks5Accounts,
+  getSocks5RoutingProfiles,
+  updateSocks5Account
+} from 'api/proxyGateway';
 
 const emptyAccount = { id: '', username: '', password: '', profileId: 'default', enabled: true, hasPassword: false };
 
@@ -36,6 +43,8 @@ export default function Socks5Accounts({ showMessage, onChanged }) {
   const [accounts, setAccounts] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [deleting, setDeleting] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingID, setEditingID] = useState('');
   const [form, setForm] = useState(emptyAccount);
@@ -43,16 +52,17 @@ export default function Socks5Accounts({ showMessage, onChanged }) {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const [accountsResponse, profilesResponse] = await Promise.all([getSocks5Accounts(), getSocks5RoutingProfiles()]);
       setAccounts(Array.isArray(accountsResponse.data) ? accountsResponse.data : []);
       setProfiles(Array.isArray(profilesResponse.data) ? profilesResponse.data : []);
     } catch (error) {
-      showMessage(errorMessage(t, error), 'error');
+      setLoadError(errorMessage(t, error));
     } finally {
       setLoading(false);
     }
-  }, [showMessage, t]);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -95,6 +105,7 @@ export default function Socks5Accounts({ showMessage, onChanged }) {
 
   const remove = async (account) => {
     if (!window.confirm(t('settings.socks5.accounts.deleteConfirm', { username: account.username }))) return;
+    setDeleting(account.id);
     try {
       await deleteSocks5Account(account.id);
       showMessage(t('settings.socks5.accounts.messages.deleted'));
@@ -102,6 +113,8 @@ export default function Socks5Accounts({ showMessage, onChanged }) {
       onChanged?.();
     } catch (error) {
       showMessage(errorMessage(t, error), 'error');
+    } finally {
+      setDeleting('');
     }
   };
 
@@ -111,19 +124,45 @@ export default function Socks5Accounts({ showMessage, onChanged }) {
 
   return (
     <>
-      <Card variant="outlined" sx={{ mt: 2 }}>
+      <Card variant="outlined">
         <CardHeader
+          sx={{
+            flexWrap: 'wrap',
+            gap: 1,
+            '& .MuiCardHeader-content': { minWidth: 0, flexBasis: { xs: '100%', sm: 'auto' } },
+            '& .MuiCardHeader-action': { m: 0, alignSelf: 'center' }
+          }}
           title={t('settings.socks5.accounts.title')}
           subheader={t('settings.socks5.accounts.subheader')}
           action={
-            <Button variant="contained" onClick={openCreate} disabled={loading}>
+            <Button variant="contained" onClick={openCreate} disabled={loading || Boolean(loadError) || Boolean(deleting)}>
               {t('settings.socks5.accounts.create')}
             </Button>
           }
         />
-        <CardContent>
+        <CardContent sx={{ pt: 0 }}>
+          {loadError && (
+            <Alert
+              severity="error"
+              sx={{ mb: 1.5 }}
+              action={
+                <Button color="inherit" size="small" onClick={load}>
+                  {t('settings.socks5.page.retry')}
+                </Button>
+              }
+            >
+              {loadError}
+            </Alert>
+          )}
+          {loading && (
+            <Typography role="status" color="text.secondary">
+              {t('settings.socks5.page.loading')}
+            </Typography>
+          )}
           <Stack spacing={1.25}>
-            {accounts.length === 0 && <Typography color="text.secondary">{t('settings.socks5.accounts.empty')}</Typography>}
+            {!loading && !loadError && accounts.length === 0 && (
+              <Typography color="text.secondary">{t('settings.socks5.accounts.empty')}</Typography>
+            )}
             {accounts.map((account) => {
               const profile = profiles.find((item) => item.id === account.profileId);
               return (
@@ -138,17 +177,24 @@ export default function Socks5Accounts({ showMessage, onChanged }) {
                           color={account.enabled ? 'success' : 'default'}
                           label={t(account.enabled ? 'common.enabled' : 'common.disabled')}
                         />
-                        <Chip size="small" color="primary" variant="outlined" label={profile?.name || account.profileId} />
+                        <Chip
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          label={
+                            account.profileId === 'default' ? t('settings.socks5.profiles.default') : profile?.name || account.profileId
+                          }
+                        />
                       </Stack>
                       <Typography variant="body2" color="text.secondary">
                         {t(account.hasPassword ? 'settings.socks5.accounts.passwordSaved' : 'settings.socks5.accounts.passwordMissing')}
                       </Typography>
                     </Box>
                     <Stack direction="row" spacing={1}>
-                      <Button size="small" onClick={() => openEdit(account)}>
+                      <Button size="small" disabled={loading || Boolean(deleting)} onClick={() => openEdit(account)}>
                         {t('common.edit')}
                       </Button>
-                      <Button size="small" color="error" onClick={() => remove(account)}>
+                      <Button size="small" color="error" disabled={Boolean(deleting)} onClick={() => remove(account)}>
                         {t('common.delete')}
                       </Button>
                     </Stack>
@@ -163,7 +209,10 @@ export default function Socks5Accounts({ showMessage, onChanged }) {
       <Dialog open={dialogOpen} onClose={() => !saving && setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t(editingID ? 'settings.socks5.accounts.editTitle' : 'settings.socks5.accounts.createTitle')}</DialogTitle>
         <DialogContent dividers>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('settings.socks5.page.applyImmediately')}
+            </Typography>
             <TextField
               label={t('settings.socks5.accounts.id')}
               value={form.id}
@@ -189,8 +238,9 @@ export default function Socks5Accounts({ showMessage, onChanged }) {
               helperText={t(editingID ? 'settings.socks5.accounts.passwordEditHelper' : 'settings.socks5.accounts.passwordCreateHelper')}
             />
             <FormControl fullWidth>
-              <InputLabel>{t('settings.socks5.accounts.profile')}</InputLabel>
+              <InputLabel id="gateway-account-profile-label">{t('settings.socks5.accounts.profile')}</InputLabel>
               <Select
+                labelId="gateway-account-profile-label"
                 value={form.profileId}
                 label={t('settings.socks5.accounts.profile')}
                 onChange={(event) => setForm((previous) => ({ ...previous, profileId: event.target.value }))}
@@ -199,7 +249,7 @@ export default function Socks5Accounts({ showMessage, onChanged }) {
                   .filter((profile) => profile.enabled)
                   .map((profile) => (
                     <MenuItem key={profile.id} value={profile.id}>
-                      {profile.name}
+                      {profile.isDefault ? t('settings.socks5.profiles.default') : profile.name}
                     </MenuItem>
                   ))}
               </Select>

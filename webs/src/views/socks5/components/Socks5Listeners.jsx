@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -13,6 +14,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
@@ -27,7 +29,7 @@ import {
   getSocks5Listeners,
   getSocks5RoutingProfiles,
   updateSocks5Listener
-} from 'api/settings';
+} from 'api/proxyGateway';
 
 const emptyListener = {
   id: '',
@@ -54,11 +56,13 @@ function errorMessage(t, error) {
   return response?.msg || error.message;
 }
 
-export default function Socks5Listeners({ showMessage, onChanged }) {
+export default function Socks5Listeners({ showMessage, onChanged, statusListeners }) {
   const { t } = useTranslation();
   const [listeners, setListeners] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [deleting, setDeleting] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingID, setEditingID] = useState('');
   const [form, setForm] = useState(emptyListener);
@@ -66,16 +70,17 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const [listenersResponse, profilesResponse] = await Promise.all([getSocks5Listeners(), getSocks5RoutingProfiles()]);
       setListeners(Array.isArray(listenersResponse.data) ? listenersResponse.data : []);
       setProfiles(Array.isArray(profilesResponse.data) ? profilesResponse.data : []);
     } catch (error) {
-      showMessage(errorMessage(t, error), 'error');
+      setLoadError(errorMessage(t, error));
     } finally {
       setLoading(false);
     }
-  }, [showMessage, t]);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -119,6 +124,7 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
 
   const remove = async (listener) => {
     if (!window.confirm(t('settings.socks5.listeners.deleteConfirm', { id: listener.id }))) return;
+    setDeleting(listener.id);
     try {
       await deleteSocks5Listener(listener.id);
       showMessage(t('settings.socks5.listeners.messages.deleted'));
@@ -126,6 +132,8 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
       onChanged?.();
     } catch (error) {
       showMessage(errorMessage(t, error), 'error');
+    } finally {
+      setDeleting('');
     }
   };
 
@@ -140,20 +148,55 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
 
   return (
     <>
-      <Card variant="outlined" sx={{ mt: 2 }}>
+      <Card variant="outlined">
         <CardHeader
+          sx={{
+            flexWrap: 'wrap',
+            gap: 1,
+            '& .MuiCardHeader-content': { minWidth: 0, flexBasis: { xs: '100%', sm: 'auto' } },
+            '& .MuiCardHeader-action': { m: 0, alignSelf: 'center' }
+          }}
           title={t('settings.socks5.listeners.title')}
           subheader={t('settings.socks5.listeners.subheader')}
           action={
-            <Button variant="contained" onClick={openCreate} disabled={loading}>
+            <Button variant="contained" onClick={openCreate} disabled={loading || Boolean(loadError) || Boolean(deleting)}>
               {t('settings.socks5.listeners.create')}
             </Button>
           }
         />
-        <CardContent>
+        <CardContent sx={{ pt: 0 }}>
+          {loadError && (
+            <Alert
+              severity="error"
+              sx={{ mb: 1.5 }}
+              action={
+                <Button color="inherit" size="small" onClick={load}>
+                  {t('settings.socks5.page.retry')}
+                </Button>
+              }
+            >
+              {loadError}
+            </Alert>
+          )}
+          {loading && (
+            <Typography role="status" color="text.secondary">
+              {t('settings.socks5.page.loading')}
+            </Typography>
+          )}
           <Stack spacing={1.25}>
-            {listeners.length === 0 && <Typography color="text.secondary">{t('settings.socks5.listeners.empty')}</Typography>}
+            {!loading && !loadError && listeners.length === 0 && (
+              <Typography color="text.secondary">{t('settings.socks5.listeners.empty')}</Typography>
+            )}
             {listeners.map((listener) => {
+              const runtime =
+                statusListeners?.find(
+                  (item) =>
+                    item.id === listener.id &&
+                    item.listenAddress === listener.listenAddress &&
+                    item.port === listener.port &&
+                    item.protocol === listener.protocol &&
+                    item.enabled === listener.enabled
+                ) || listener;
               const profile = profiles.find((item) => item.id === listener.defaultProfileId);
               return (
                 <Box key={listener.id} sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1.5 }}>
@@ -163,8 +206,8 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
                         <Typography variant="subtitle1">{listener.id}</Typography>
                         <Chip
                           size="small"
-                          color={listener.running ? 'success' : 'default'}
-                          label={t(listener.running ? 'settings.socks5.listeners.running' : 'settings.socks5.listeners.stopped')}
+                          color={runtime.running ? 'success' : 'default'}
+                          label={t(runtime.running ? 'settings.socks5.listeners.running' : 'settings.socks5.listeners.stopped')}
                         />
                         <Chip
                           size="small"
@@ -172,20 +215,29 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
                           label={t(`settings.socks5.listeners.protocols.${listener.protocol || 'socks5'}`)}
                         />
                         <Chip size="small" label={t(listener.enabled ? 'common.enabled' : 'common.disabled')} />
-                        <Chip size="small" color="primary" variant="outlined" label={profile?.name || listener.defaultProfileId} />
+                        <Chip
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          label={
+                            listener.defaultProfileId === 'default'
+                              ? t('settings.socks5.profiles.default')
+                              : profile?.name || listener.defaultProfileId
+                          }
+                        />
                       </Stack>
                       <Typography variant="body2" color="text.secondary">
-                        {listener.boundAddress || `${listener.listenAddress}:${listener.port}`} ·{' '}
+                        {runtime.boundAddress || `${listener.listenAddress}:${listener.port}`} ·{' '}
                         {t(
                           `settings.socks5.listeners.auth.${listener.requireAuth === true ? 'required' : listener.requireAuth === false ? 'disabled' : 'inherit'}`
                         )}
                       </Typography>
                     </Box>
                     <Stack direction="row" spacing={1}>
-                      <Button size="small" onClick={() => openEdit(listener)}>
+                      <Button size="small" disabled={loading || Boolean(deleting)} onClick={() => openEdit(listener)}>
                         {t('common.edit')}
                       </Button>
-                      <Button size="small" color="error" onClick={() => remove(listener)}>
+                      <Button size="small" color="error" disabled={Boolean(deleting)} onClick={() => remove(listener)}>
                         {t('common.delete')}
                       </Button>
                     </Stack>
@@ -201,6 +253,9 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
         <DialogTitle>{t(editingID ? 'settings.socks5.listeners.editTitle' : 'settings.socks5.listeners.createTitle')}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('settings.socks5.page.applyImmediately')}
+            </Typography>
             <TextField
               select
               fullWidth
@@ -227,6 +282,7 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
               <TextField
                 fullWidth
                 label={t('settings.socks5.listeners.address')}
+                helperText={t('settings.socks5.form.listenAddressHelper')}
                 value={form.listenAddress}
                 onChange={(event) => setForm((previous) => ({ ...previous, listenAddress: event.target.value }))}
               />
@@ -240,8 +296,9 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
               />
             </Stack>
             <FormControl fullWidth>
-              <InputLabel>{t('settings.socks5.listeners.profile')}</InputLabel>
+              <InputLabel id="gateway-listener-profile-label">{t('settings.socks5.listeners.profile')}</InputLabel>
               <Select
+                labelId="gateway-listener-profile-label"
                 value={form.defaultProfileId}
                 label={t('settings.socks5.listeners.profile')}
                 onChange={(event) => setForm((previous) => ({ ...previous, defaultProfileId: event.target.value }))}
@@ -250,14 +307,15 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
                   .filter((profile) => profile.enabled)
                   .map((profile) => (
                     <MenuItem key={profile.id} value={profile.id}>
-                      {profile.name}
+                      {profile.isDefault ? t('settings.socks5.profiles.default') : profile.name}
                     </MenuItem>
                   ))}
               </Select>
             </FormControl>
             <FormControl fullWidth>
-              <InputLabel>{t('settings.socks5.listeners.authPolicy')}</InputLabel>
+              <InputLabel id="gateway-listener-auth-label">{t('settings.socks5.listeners.authPolicy')}</InputLabel>
               <Select
+                labelId="gateway-listener-auth-label"
                 value={form.requireAuthMode}
                 label={t('settings.socks5.listeners.authPolicy')}
                 onChange={(event) => setForm((previous) => ({ ...previous, requireAuthMode: event.target.value }))}
@@ -266,6 +324,7 @@ export default function Socks5Listeners({ showMessage, onChanged }) {
                 <MenuItem value="required">{t('settings.socks5.listeners.auth.required')}</MenuItem>
                 <MenuItem value="disabled">{t('settings.socks5.listeners.auth.disabled')}</MenuItem>
               </Select>
+              <FormHelperText>{t('settings.socks5.page.listenerAuthHelp')}</FormHelperText>
             </FormControl>
             <FormControlLabel
               control={

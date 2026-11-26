@@ -70,7 +70,7 @@ func TestServerHealthSweepRecordsNodeResults(t *testing.T) {
 		}
 		return 25, nil
 	}
-	server.runHealthSweep(context.Background())
+	server.runHealthSweep(context.Background(), nil, false)
 	snapshot := server.HealthSnapshot()
 	if snapshot.HealthyNodes != 1 || snapshot.UnhealthyNodes != 1 || len(snapshot.Nodes) != 2 {
 		t.Fatalf("health snapshot = %+v", snapshot)

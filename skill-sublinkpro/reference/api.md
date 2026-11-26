@@ -756,10 +756,10 @@ Base: `/api/v1/settings` (write bodies are JSON unless noted; most writes are de
 
 ### Proxy gateway (SOCKS5 / HTTP / Mixed)
 
-All SOCKS5 endpoints require an authenticated administrator. Destructive `POST`/`DELETE` operations are restricted in demo mode.
+Proxy gateway management requires an authenticated administrator. Demo mode restricts all writes. The retired `/api/v1/settings/socks5` namespace returns `404`. Update clients to the new paths. The former `/profiles`, `/routing`, and `/routing/reset` move to `/routing-profiles`, `/node-stats`, and `/node-stats/reset` under the new prefix.
 
-- **GET** `/api/v1/settings/socks5` — read public gateway settings. The plaintext password is never returned.
-- **POST** `/api/v1/settings/socks5` — save and apply JSON settings:
+- **GET** `/api/v1/proxy-gateway/settings` — read public gateway settings. The plaintext password is never returned.
+- **POST** `/api/v1/proxy-gateway/settings` — save and apply JSON settings:
   `enabled`, `listenAddress`, `port`, `username`, optional `password`, `clearPassword`, `nodeId`,
   `selection` (`best`, `random`, `round_robin`, `smart`, or `specific`), `requireAuth`, `maxAttempts` (1-5),
   `dialTimeoutSeconds` (1-120), `failureCooldownSeconds` (0-3600), `specificFallback`,
@@ -770,29 +770,32 @@ All SOCKS5 endpoints require an authenticated administrator. Destructive `POST`/
   `stickySessionMode` (`client_ip` or `username`), and `stickySessionTtlSeconds` (60-604800).
   Candidate-pool fields combine with AND; values inside one field combine with OR. Empty arrays do not restrict the pool.
   Optional fields may be omitted to preserve saved values for legacy clients. `0` disables either connection timeout.
-- **POST** `/api/v1/settings/socks5/stop` — stop the listener without changing saved settings.
-- **GET** `/api/v1/settings/socks5/status` — return `data.config`, `data.listeners`, aggregate `data.stats`, and `data.health`.
-- **GET/POST** `/api/v1/settings/socks5/listeners` — list or create listener endpoints (`id`, `protocol`: `socks5|http|mixed`, `enabled`, `listenAddress`, `port`, `defaultProfileId`, nullable `requireAuth`).
-- **PUT/DELETE** `/api/v1/settings/socks5/listeners/:id` — replace or delete a listener endpoint.
-- **GET/POST** `/api/v1/settings/socks5/accounts` — list or create independent credentials bound to routing profiles. Plaintext passwords are never returned.
-- **PUT/DELETE** `/api/v1/settings/socks5/accounts/:id` — replace or delete an independent account; an omitted/empty update password keeps the saved password.
-- **GET** `/api/v1/settings/socks5/profiles` — list the virtual `default` routing profile and saved custom profiles.
-- **POST** `/api/v1/settings/socks5/profiles` — create a custom routing profile with an independent candidate pool and routing settings.
-- **PUT** `/api/v1/settings/socks5/profiles/:id` — replace a custom profile.
-- **DELETE** `/api/v1/settings/socks5/profiles/:id` — delete a custom profile; the reserved `default` profile cannot be deleted.
-- **GET** `/api/v1/settings/socks5/routing` — return a server-paginated candidate-node runtime page. Pass `profileId` to inspect a specific profile. Supports `keyword`, `status`, `sortBy`, `sortOrder`, `page`, and `pageSize` (maximum `100`). Items include health state, latency source, active/success/failure counters, smart score, cooldown, and last-selection time.
-- **POST** `/api/v1/settings/socks5/routing/reset` — reset per-node historical counters without disconnecting active sessions.
+  If applying the saved settings fails, the application error includes the latest saved public configuration in `data.settings`.
+- **POST** `/api/v1/proxy-gateway/start` — resume using saved settings. Both the gateway and at least one listener must be enabled.
+- **POST** `/api/v1/proxy-gateway/stop` — stop all listeners and keep saved settings. Start and stop return the status response shape.
+- **GET** `/api/v1/proxy-gateway/status` — read `data.enabled`, `data.running`, `data.listeners`, aggregate connection and traffic counters in `data.stats`, and health counts deduplicated across running listeners in `data.health`. Running listeners include `effectiveRequireAuth`, the actual authentication requirement of the active listener.
+- **GET** `/api/v1/proxy-gateway/health` — read sweep timing and counts plus up to 200 node details, including status, latency, cooldown, a bounded error message, and the reporting `listenerId`.
+- **GET/POST** `/api/v1/proxy-gateway/listeners` — list or create listener endpoints (`id`, `protocol`: `socks5|http|mixed`, `enabled`, `listenAddress`, `port`, `defaultProfileId`, nullable `requireAuth`).
+- **PUT/DELETE** `/api/v1/proxy-gateway/listeners/:id` — replace or delete a listener endpoint.
+- **GET/POST** `/api/v1/proxy-gateway/accounts` — list or create independent credentials bound to routing profiles. Plaintext passwords are never returned.
+- **PUT/DELETE** `/api/v1/proxy-gateway/accounts/:id` — replace or delete an independent account; an omitted/empty update password keeps the saved password.
+- **GET** `/api/v1/proxy-gateway/routing-profiles` — list the virtual `default` routing profile and saved custom profiles.
+- **POST** `/api/v1/proxy-gateway/routing-profiles` — create a custom routing profile with an independent candidate pool and routing settings.
+- **PUT** `/api/v1/proxy-gateway/routing-profiles/:id` — replace a custom profile.
+- **DELETE** `/api/v1/proxy-gateway/routing-profiles/:id` — delete a custom profile; the reserved `default` profile cannot be deleted.
+- **GET** `/api/v1/proxy-gateway/node-stats` — return a server-paginated page of candidate nodes. Omit `listenerId` to sum forwarding counts across running listeners, or pass an ID to scope them. Pass `allProfiles=true` to include candidates from all enabled profiles. Otherwise `profileId` selects the candidate pool and defaults to `default`. Counts cover all traffic to those nodes within the selected listeners. Supports `keyword`, `status`, `sortBy`, `sortOrder`, `page`, and `pageSize` (maximum `100`). Items include health state, latency source, active/success/failure counters, smart score, cooldown, and last-routed time. `healthListenerId` identifies the listener supplying health, latency, and smart score. `probeRunning` indicates an active sweep on any selected listener.
+- **POST** `/api/v1/proxy-gateway/stats/reset` — reset connection and traffic totals across running listeners while keeping live connections. Counts reflect traffic after the reset. Returns business code `409` if the gateway is stopped.
+- **POST** `/api/v1/proxy-gateway/node-stats/reset` — reset successful and failed outbound dials and last-routed times across all running listeners. Active forwards, gateway totals, and node health remain available.
   Stats include `activeConnections`, `totalConnections`, `successfulConnections`, `failedConnections`, `uploadBytes`, and `downloadBytes`.
-  Health includes sweep timing/counts and per-node status, latency, consecutive failures, cooldown, and a bounded error message.
-- **POST** `/api/v1/settings/socks5/health/probe` — trigger an immediate administrator-only health sweep. Duplicate concurrent sweeps are not started.
-- **GET** `/api/v1/settings/socks5/connections` — return the current active connection array. Each item includes
+- **POST** `/api/v1/proxy-gateway/health/probe` — trigger an immediate health sweep. Optional `listenerId` and `profileId` narrow the scope. Each listener runs at most one sweep at a time.
+- **GET** `/api/v1/proxy-gateway/connections` — return the current active connection array. Each item includes
   `id`, `clientAddress`, `target`, `nodeName`, `profileId`, `profileName`, optional `account`, optional `listenerId`, `protocol` (actual `socks5`/`http`; briefly `mixed` or empty before identification), optional `method` (e.g. `CONNECT`), `phase`, `startedAt`, `lastActivity`, `uploadBytes`, and `downloadBytes`.
-- **DELETE** `/api/v1/settings/socks5/connections/:id` — disconnect one active connection by ID.
-- **DELETE** `/api/v1/settings/socks5/connections` — disconnect all active connections.
+- **DELETE** `/api/v1/proxy-gateway/connections/:id` — disconnect one active connection by ID.
+- **DELETE** `/api/v1/proxy-gateway/connections` — disconnect all active connections.
 
-`data.config` uses the same public settings shape as the settings endpoint, including `hasPassword`, optional `maskedPassword`, `running`, and `boundAddress`; it never includes plaintext `password`. Omitting `password` preserves the saved password, while `clearPassword: true` clears it. Status counters, active connections, and in-memory sticky leases belong to the current gateway server lifetime and reset after stop/reapply. TCP CONNECT supports multiple listeners, independent profile-bound accounts, adapter reuse, pre-reply candidate retry, exponential failure cooldown, smart P2C load balancing, sticky sessions, connection limits, idle/duration timeouts, active health probing, and live monitoring. UDP ASSOCIATE and BIND are not implemented.
+Read the saved configuration from `/settings`. The public settings contain `hasPassword`, optional `maskedPassword`, `running`, and optional `boundAddress`. Omitting `password` preserves the saved password, while `clearPassword: true` clears it. Status counters, active connections, and in-memory sticky leases belong to the current gateway server lifetime and reset after stop/reapply. TCP CONNECT supports multiple listeners, independent profile-bound accounts, adapter reuse, pre-reply candidate retry, exponential failure cooldown, smart P2C load balancing, sticky sessions, connection limits, idle/duration timeouts, active health probing, and live monitoring. UDP ASSOCIATE and BIND are not implemented.
 
-Listener `protocol` is stored inside the existing listener JSON. Old entries and omitted create fields default to `socks5`; PUT with omitted protocol preserves its current value. Unknown values fail validation. The compatibility default endpoint remains SOCKS5 until explicitly edited through the listener API. This field is unrelated to outbound `candidateProtocols`. No top-level protocol setting, additional fixed service port, new environment variable, or external proxy process is required.
+Listener `protocol` is stored inside the existing listener JSON. Old entries and omitted create fields default to `socks5`; PUT with omitted protocol preserves its current value. Unknown values fail validation. The saved gateway address and port provide the initial SOCKS5 listener `default` when no explicit listener list is saved. Edit its endpoint or protocol through the listener API. This field is unrelated to outbound `candidateProtocols`. No top-level protocol setting, additional fixed service port, new environment variable, or external proxy process is required.
 
 HTTP supports absolute `http://` requests and HTTPS CONNECT (not inbound TLS/HTTP2/Upgrade). It consumes `Proxy-Authorization: Basic` using the same account/profile rules, returns 407 on failed authentication and never forwards proxy credentials to the origin. Usernames containing colons are SOCKS5-only. Each keep-alive request authenticates/routes anew, without cross-request upstream pooling; retries only cover dialing before request bytes. Non-loopback authentication restrictions apply to all modes. TCP counts remain per client connection; ordinary HTTP traffic counters measure forwarded bodies, tunnel counters measure payload. Connection metadata describes the current/latest request; `idle` means waiting for another request. Gateway controls cover HTTP and hijacked CONNECT lifetimes. See `docs/features/socks5.md` for curl and safety examples.
 

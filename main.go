@@ -645,7 +645,7 @@ func Run() {
 	routers.Script(r)
 	routers.SSE(r)
 	routers.Settings(r)
-	routers.Socks5(r)
+	routers.ProxyGateway(r)
 	routers.Tag(r)
 	routers.Tasks(r)
 	routers.GeoIP(r)

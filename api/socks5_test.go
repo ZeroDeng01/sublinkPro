@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -246,6 +248,9 @@ func TestGetSocks5StatusAndConnectionsRequireAdmin(t *testing.T) {
 	if !strings.Contains(statusRecorder.Body.String(), `"activeConnections":0`) || !strings.Contains(statusRecorder.Body.String(), `"health"`) {
 		t.Fatalf("status response missing gateway stats or health: %s", statusRecorder.Body.String())
 	}
+	if strings.Contains(statusRecorder.Body.String(), `"nodes"`) || strings.Contains(statusRecorder.Body.String(), `"config"`) {
+		t.Fatalf("status response includes configuration or node details: %s", statusRecorder.Body.String())
+	}
 	connectionsRecorder := performSocks5JSONRequest(t, "admin", http.MethodGet, nil, GetSocks5Connections)
 	if connectionsRecorder.Code != http.StatusOK {
 		t.Fatalf("connections endpoint code = %d, body = %s", connectionsRecorder.Code, connectionsRecorder.Body.String())
@@ -253,11 +258,71 @@ func TestGetSocks5StatusAndConnectionsRequireAdmin(t *testing.T) {
 	if !strings.Contains(connectionsRecorder.Body.String(), `"data":[]`) {
 		t.Fatalf("connections response should be empty: %s", connectionsRecorder.Body.String())
 	}
-	for _, handler := range []func(*gin.Context){GetSocks5Status, GetSocks5Connections} {
+	for _, handler := range []func(*gin.Context){GetSocks5Status, GetSocks5Connections, GetProxyGatewayHealth, StartProxyGateway, StopSocks5} {
 		recorder := performSocks5JSONRequest(t, "member", http.MethodGet, nil, handler)
 		if recorder.Code != http.StatusForbidden {
 			t.Fatalf("non-admin status = %d, want %d", recorder.Code, http.StatusForbidden)
 		}
+	}
+}
+
+func TestProxyGatewayReportsSavedSettingsAfterBindFailureAndCanResume(t *testing.T) {
+	setupBackupAPITestDB(t)
+	manager := socks5service.DefaultManager()
+	manager.Stop()
+	t.Cleanup(manager.Stop)
+	t.Setenv("SUBLINK_API_ENCRYPTION_KEY", "socks5-test-key-0123456789abcdef0123456789")
+
+	disabled := performSocks5JSONRequest(t, "admin", http.MethodPost, nil, StartProxyGateway)
+	if !strings.Contains(disabled.Body.String(), "settings.socks5.api.gatewayDisabled") {
+		t.Fatalf("unexpected start while disabled: %s", disabled.Body.String())
+	}
+	var listenConfig net.ListenConfig
+	occupied, err := listenConfig.Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = occupied.Close() })
+	address, ok := occupied.Addr().(*net.TCPAddr)
+	if !ok {
+		t.Fatalf("unexpected listener address %T", occupied.Addr())
+	}
+	port := address.Port
+	payload := map[string]any{
+		"enabled": true, "listenAddress": "127.0.0.1", "port": port,
+		"requireAuth": true, "username": "proxy-user", "password": "test-bind-password",
+	}
+	failed := performSocks5JSONRequest(t, "admin", http.MethodPost, payload, UpdateSocks5Settings)
+	body := failed.Body.String()
+	for _, fragment := range []string{"settings.socks5.api.applyFailed", `"settings":{`, `"hasPassword":true`, `"running":false`} {
+		if !strings.Contains(body, fragment) {
+			t.Fatalf("missing %q from apply failure: %s", fragment, body)
+		}
+	}
+	if strings.Contains(body, "test-bind-password") || strings.Contains(body, `"password"`) {
+		t.Fatalf("apply failure included a password: %s", body)
+	}
+	if err := occupied.Close(); err != nil {
+		t.Fatal(err)
+	}
+	resumed := performSocks5JSONRequest(t, "admin", http.MethodPost, nil, StartProxyGateway)
+	if !strings.Contains(resumed.Body.String(), `"running":true`) {
+		t.Fatalf("start did not apply saved settings: %s", resumed.Body.String())
+	}
+	stopped := performSocks5JSONRequest(t, "admin", http.MethodPost, nil, StopSocks5)
+	if !strings.Contains(stopped.Body.String(), `"enabled":true,"running":false`) {
+		t.Fatalf("stop did not preserve the saved enable state: %s", stopped.Body.String())
+	}
+
+	// Either ordering of the two commands must leave the disabled gateway stopped.
+	payload["enabled"] = false
+	var commands sync.WaitGroup
+	commands.Go(func() { performSocks5JSONRequest(t, "admin", http.MethodPost, nil, StartProxyGateway) })
+	commands.Go(func() { performSocks5JSONRequest(t, "admin", http.MethodPost, payload, UpdateSocks5Settings) })
+	commands.Wait()
+	status := performSocks5JSONRequest(t, "admin", http.MethodGet, nil, GetSocks5Status)
+	if !strings.Contains(status.Body.String(), `"enabled":false,"running":false`) {
+		t.Fatalf("concurrent start and disable left an inconsistent status: %s", status.Body.String())
 	}
 }
 
@@ -286,7 +351,11 @@ func TestSocks5RoutingEndpointsRequireAdmin(t *testing.T) {
 	if reset.Code != http.StatusOK || !strings.Contains(reset.Body.String(), "runtimeReset") {
 		t.Fatalf("unexpected runtime reset response: status=%d body=%s", reset.Code, reset.Body.String())
 	}
-	for _, handler := range []func(*gin.Context){GetSocks5RoutingSnapshot, ResetSocks5RuntimeStats} {
+	gatewayReset := performSocks5JSONRequest(t, "admin", http.MethodPost, nil, ResetProxyGatewayStats)
+	if gatewayReset.Code != http.StatusOK || !strings.Contains(gatewayReset.Body.String(), `"code":409`) || !strings.Contains(gatewayReset.Body.String(), "monitorGatewayUnavailable") {
+		t.Fatalf("unexpected gateway reset response while stopped: status=%d body=%s", gatewayReset.Code, gatewayReset.Body.String())
+	}
+	for _, handler := range []func(*gin.Context){GetSocks5RoutingSnapshot, ResetSocks5RuntimeStats, ResetProxyGatewayStats} {
 		recorder := performSocks5JSONRequest(t, "member", http.MethodGet, nil, handler)
 		if recorder.Code != http.StatusForbidden {
 			t.Fatalf("non-admin routing status = %d, want %d", recorder.Code, http.StatusForbidden)

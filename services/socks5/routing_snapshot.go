@@ -15,16 +15,19 @@ const (
 )
 
 type RoutingSnapshotQuery struct {
-	ProfileID string
-	Keyword   string
-	Status    string
-	SortBy    string
-	SortOrder string
-	Page      int
-	PageSize  int
+	ListenerID  string
+	AllProfiles bool
+	ProfileID   string
+	Keyword     string
+	Status      string
+	SortBy      string
+	SortOrder   string
+	Page        int
+	PageSize    int
 }
 
 type NodeRoutingSnapshot struct {
+	HealthListenerID      string     `json:"healthListenerId,omitempty"`
 	ProfileID             string     `json:"profileId"`
 	ProfileName           string     `json:"profileName"`
 	NodeID                int        `json:"nodeId"`
@@ -61,14 +64,15 @@ type RoutingSnapshotSummary struct {
 }
 
 type RoutingSnapshotPage struct {
-	ProfileID   string                 `json:"profileId"`
-	ProfileName string                 `json:"profileName"`
-	Items       []NodeRoutingSnapshot  `json:"items"`
-	Total       int                    `json:"total"`
-	Page        int                    `json:"page"`
-	PageSize    int                    `json:"pageSize"`
-	TotalPages  int                    `json:"totalPages"`
-	Summary     RoutingSnapshotSummary `json:"summary"`
+	ProfileID    string                 `json:"profileId"`
+	ProfileName  string                 `json:"profileName"`
+	ProbeRunning bool                   `json:"probeRunning"`
+	Items        []NodeRoutingSnapshot  `json:"items"`
+	Total        int                    `json:"total"`
+	Page         int                    `json:"page"`
+	PageSize     int                    `json:"pageSize"`
+	TotalPages   int                    `json:"totalPages"`
+	Summary      RoutingSnapshotSummary `json:"summary"`
 }
 
 func emptyRoutingSnapshot(query RoutingSnapshotQuery) RoutingSnapshotPage {
@@ -103,21 +107,60 @@ func normalizeRoutingSnapshotQuery(query RoutingSnapshotQuery) RoutingSnapshotQu
 }
 
 func (s *Server) RoutingSnapshot(query RoutingSnapshotQuery) (RoutingSnapshotPage, error) {
+	return routingSnapshot(query, []*Server{s})
+}
+
+func routingSnapshot(query RoutingSnapshotQuery, servers []*Server) (RoutingSnapshotPage, error) {
 	query = normalizeRoutingSnapshotQuery(query)
-	profile, nodes, err := s.candidateNodesForProfile(query.ProfileID)
+	if len(servers) == 0 {
+		return emptyRoutingSnapshot(query), nil
+	}
+	var profile RoutingProfile
+	var nodes []models.Node
+	var err error
+	if query.AllProfiles {
+		nodes, err = servers[0].profiles.monitoringCandidates()
+	} else {
+		profile, nodes, err = servers[0].candidateNodesForProfile(query.ProfileID)
+	}
 	if err != nil {
 		return emptyRoutingSnapshot(query), err
 	}
-	healthStates := s.routingHealthStates(nodes)
-	runtimeStates := s.router.runtime.snapshot(nodes)
-	now := s.router.health.now()
+	runtimes := make([]map[string]nodeRuntimeState, 0, len(servers))
+	health := make([]map[string]nodeHealthState, 0, len(servers))
+	probeRunning := false
+	for _, server := range servers {
+		runtimes = append(runtimes, server.router.runtime.snapshot(nodes))
+		health = append(health, server.routingHealthStates(nodes))
+		probeRunning = probeRunning || server.probeSchedule().Running
+	}
+	now := servers[0].router.health.now()
 	items := make([]NodeRoutingSnapshot, 0, len(nodes))
 	summary := RoutingSnapshotSummary{TotalNodes: len(nodes)}
 	for _, node := range nodes {
 		key := adapterKey(node)
-		health := healthStates[key]
-		runtime := runtimeStates[key]
-		item := buildNodeRoutingSnapshot(profile, node, health, runtime, now)
+		var totals nodeRuntimeState
+		var source int
+		for index, states := range runtimes {
+			state := states[key]
+			totals.ActiveConnections += state.ActiveConnections
+			totals.SuccessfulConnections += state.SuccessfulConnections
+			totals.FailedConnections += state.FailedConnections
+			if state.LastSelectedAt.After(totals.LastSelectedAt) {
+				totals.LastSelectedAt = state.LastSelectedAt
+			}
+			if preferMonitoringHealth(health[index][key], health[source][key], now) {
+				source = index
+			}
+		}
+		item := buildNodeRoutingSnapshot(profile, node, health[source][key], runtimes[source][key], now)
+		if health[source][key].NodeID != 0 {
+			item.HealthListenerID = servers[source].listenerID
+		}
+		item.ActiveConnections = totals.ActiveConnections
+		item.SuccessfulConnections = totals.SuccessfulConnections
+		item.FailedConnections = totals.FailedConnections
+		item.LastSelectedAt = timePointer(totals.LastSelectedAt)
 		items = append(items, item)
 		accumulateRoutingSummary(&summary, item)
 	}
@@ -142,7 +185,7 @@ func (s *Server) RoutingSnapshot(query RoutingSnapshotQuery) (RoutingSnapshotPag
 	}
 	pageItems := append([]NodeRoutingSnapshot(nil), items[start:end]...)
 	return RoutingSnapshotPage{
-		ProfileID: profile.ID, ProfileName: profile.Name,
+		ProfileID: profile.ID, ProfileName: profile.Name, ProbeRunning: probeRunning,
 		Items: pageItems, Total: total, Page: query.Page, PageSize: query.PageSize,
 		TotalPages: totalPages, Summary: summary,
 	}, nil

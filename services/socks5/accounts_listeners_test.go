@@ -56,6 +56,51 @@ func testBaseConfig(t *testing.T) Config {
 	return cfg
 }
 
+func TestSavedListenerControlsAuthValidationAfterEditingDefault(t *testing.T) {
+	setupSocks5SettingsDB(t)
+	base := testBaseConfig(t)
+	base.Enabled = true
+	base.ListenAddress = "0.0.0.0"
+
+	saved, err := SaveConfig(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	listeners, err := LoadListeners(saved)
+	if err != nil || len(listeners) != 1 || listeners[0].ID != "default" || listeners[0].ListenAddress != base.ListenAddress {
+		t.Fatalf("expected the original address in the listener list: %+v, %v", listeners, err)
+	}
+
+	base.RequireAuth = false
+	if _, err := SaveConfig(base); err == nil {
+		t.Fatal("an enabled non-loopback default listener must require authentication")
+	}
+
+	listener := listeners[0]
+	listener.ListenAddress = "127.0.0.1"
+	listener.Port = freePort(t)
+	if _, err := UpdateListener(saved, listener.ID, listener); err != nil {
+		t.Fatal(err)
+	}
+	saved, err = SaveConfig(base)
+	if err != nil || saved.RequireAuth {
+		t.Fatalf("could not disable shared authentication for a loopback listener: %v", err)
+	}
+
+	manager := &Manager{}
+	t.Cleanup(manager.Stop)
+	if err := manager.Apply(saved); err != nil {
+		t.Fatal(err)
+	}
+	statuses := manager.ListenerStatuses()
+	if len(statuses) != 1 || !statuses[0].Running || statuses[0].ListenAddress != listener.ListenAddress || statuses[0].Port != listener.Port {
+		t.Fatalf("expected the edited listener to be running: %+v", statuses)
+	}
+	if statuses[0].RequireAuth != nil || statuses[0].EffectiveRequireAuth == nil || *statuses[0].EffectiveRequireAuth {
+		t.Fatalf("expected the running listener to inherit disabled authentication: %+v", statuses[0])
+	}
+}
+
 func authenticateForTest(t *testing.T, server *Server, username, password string) (routingIdentity, error) {
 	t.Helper()
 	client, serverConn := net.Pipe()
@@ -213,9 +258,13 @@ func TestManagerRunsMultipleListenersAndPreservesOldGenerationOnBindFailure(t *t
 		t.Fatalf("unexpected occupied listener address type %T", occupied.Addr())
 	}
 	occupiedPort := occupiedAddr.Port
-	failed := append(append([]ListenerSpec{}, listeners...), ListenerSpec{ID: "occupied", Enabled: true, ListenAddress: "127.0.0.1", Port: occupiedPort, DefaultProfileID: "default"})
+	failed := append(append([]ListenerSpec{}, listeners...), ListenerSpec{ID: "zz-occupied", Enabled: true, ListenAddress: "127.0.0.1", Port: occupiedPort, DefaultProfileID: "default"})
+	failed[0].Protocol = ProtocolHTTP
 	if err := manager.ApplyListeners(base, failed); err == nil {
 		t.Fatal("expected occupied listener apply to fail")
+	}
+	if statuses = manager.ListenerStatuses(); len(statuses) != 2 || statuses[0].Protocol != ProtocolSOCKS5 || !statuses[0].Running {
+		t.Fatalf("failed apply did not restore the original listener: %+v", statuses)
 	}
 	for _, port := range []int{firstPort, secondPort} {
 		dialer := net.Dialer{Timeout: time.Second}

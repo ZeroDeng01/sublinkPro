@@ -140,6 +140,7 @@ type sessionRegistry struct {
 	failed     atomic.Int64
 	up         atomic.Int64
 	down       atomic.Int64
+	baseline   GatewaySnapshot
 }
 
 func newSessionRegistry(max, perIP int) *sessionRegistry {
@@ -243,17 +244,33 @@ func (r *sessionRegistry) closeAll() {
 
 func (r *sessionRegistry) recordSuccess() { r.success.Add(1) }
 func (r *sessionRegistry) recordFailure() { r.failed.Add(1) }
+func (r *sessionRegistry) resetStats() {
+	r.mu.Lock()
+	r.baseline = r.cumulativeStatsLocked()
+	r.mu.Unlock()
+}
+
 func (r *sessionRegistry) snapshotStats() GatewaySnapshot {
 	r.mu.Lock()
-	active := int64(len(r.sessions))
+	defer r.mu.Unlock()
+	stats := r.cumulativeStatsLocked()
+	stats.TotalConnections -= r.baseline.TotalConnections
+	stats.SuccessfulConnections -= r.baseline.SuccessfulConnections
+	stats.FailedConnections -= r.baseline.FailedConnections
+	stats.UploadBytes -= r.baseline.UploadBytes
+	stats.DownloadBytes -= r.baseline.DownloadBytes
+	return stats
+}
+
+// Include live bytes in the baseline so closing an old session cannot restore pre-reset traffic.
+func (r *sessionRegistry) cumulativeStatsLocked() GatewaySnapshot {
 	upload, download := r.up.Load(), r.down.Load()
 	for _, session := range r.sessions {
 		upload += session.UploadBytes.Load()
 		download += session.DownloadBytes.Load()
 	}
-	r.mu.Unlock()
 	return GatewaySnapshot{
-		ActiveConnections: active, TotalConnections: r.total.Load(),
+		ActiveConnections: int64(len(r.sessions)), TotalConnections: r.total.Load(),
 		SuccessfulConnections: r.success.Load(), FailedConnections: r.failed.Load(),
 		UploadBytes: upload, DownloadBytes: download,
 	}
