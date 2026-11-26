@@ -11,13 +11,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControlLabel,
   IconButton,
   MenuItem,
   Paper,
   Snackbar,
   Stack,
-  Switch,
   Tab,
   Tabs,
   TextField,
@@ -26,10 +24,8 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import MainCard from 'ui-component/cards/MainCard';
 import { useTaskProgress } from 'contexts/TaskProgressContext';
 import {
   getNodeCheckProfiles,
@@ -44,16 +40,16 @@ import {
 import { getNodeGroups } from 'api/nodes';
 import { getTags } from 'api/tags';
 import { getAirports } from 'api/airports';
-import { formatDateTime } from 'i18n/locales';
 import { formatUnlockProvidersSummary, setUnlockMeta } from 'views/nodes/utils';
 import NodeCheckProfileFormDialog from 'views/nodes/component/NodeCheckProfileFormDialog';
 import CheckJobDialog from './components/CheckJobDialog';
+import CheckJobList from './components/CheckJobList';
 
 const listData = (response) => (Array.isArray(response?.data) ? response.data : response?.data?.items || []);
 
 // 方案定义检测能力，任务定义编排；旧策略 ID 与单节点执行入口保持兼容。
 export default function NodeCheckList() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { registerOnComplete, unregisterOnComplete } = useTaskProgress();
   const [tab, setTab] = useState('plans');
   const [profiles, setProfiles] = useState([]);
@@ -126,10 +122,6 @@ export default function NodeCheckList() {
       setBusy(false);
     }
   };
-  const date = (value) =>
-    !value || String(value).startsWith('0001-')
-      ? '—'
-      : formatDateTime(value, i18n.resolvedLanguage || i18n.language, { dateStyle: 'short', timeStyle: 'medium' }) || '—';
   const modules = (p) => [
     t('detectionCenter.module.latency'),
     ...(p.mode === 'mihomo' ? [t('detectionCenter.module.speed')] : []),
@@ -155,203 +147,149 @@ export default function NodeCheckList() {
     notify(t('common.saveSuccess'));
   };
   return (
-    <MainCard
-      title={t('detectionCenter.title')}
-      secondary={
-        <Stack direction="row" spacing={1}>
+    <Paper variant="outlined" sx={{ bgcolor: 'background.paper', borderColor: 'divider', borderRadius: 3, minWidth: 0 }}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        flexWrap="wrap"
+        gap={0.5}
+        sx={{ px: { xs: 1.25, sm: 2 }, py: 0.5, borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tabs
+          value={tab}
+          onChange={(_, value) => setTab(value)}
+          variant="scrollable"
+          scrollButtons="auto"
+          aria-label={t('detectionCenter.title')}
+          sx={{ flex: '1 0 auto', maxWidth: '100%', minHeight: 44, '& .MuiTab-root': { minWidth: 0, minHeight: 44, px: 1.75 } }}
+        >
+          {['plans', 'jobs'].map((key) => (
+            <Tab
+              id={`check-tab-${key}`}
+              aria-controls={`check-panel-${key}`}
+              key={key}
+              value={key}
+              label={t(`detectionCenter.tabs.${key}`)}
+            />
+          ))}
+        </Tabs>
+        <Stack direction="row" alignItems="center" gap={0.5} sx={{ ml: 'auto' }}>
           <Tooltip title={t('common.refresh')}>
             <span>
-              <IconButton
-                aria-label={t('common.refresh')}
-                disabled={loading || busy}
-                onClick={() => {
-                  load();
-                }}
-              >
-                <RefreshIcon />
+              <IconButton aria-label={t('common.refresh')} disabled={loading || busy} onClick={load}>
+                <RefreshIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
           <Button
+            size="small"
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => (tab === 'plans' ? setPlanEditor({}) : setJobEditor({}))}
             disabled={busy || (tab === 'jobs' && !profiles.length)}
+            sx={{ minHeight: 36 }}
           >
             {t(tab === 'plans' ? 'detectionCenter.newPlan' : 'detectionCenter.newJob')}
           </Button>
         </Stack>
-      }
-    >
-      <Tabs
-        value={tab}
-        onChange={(_, value) => setTab(value)}
-        variant="scrollable"
-        scrollButtons="auto"
-        aria-label={t('detectionCenter.title')}
-        sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
-      >
-        {['plans', 'jobs'].map((key) => (
-          <Tab
-            id={`check-tab-${key}`}
-            aria-controls={`check-panel-${key}`}
-            key={key}
-            value={key}
-            label={t(`detectionCenter.tabs.${key}`)}
-          />
-        ))}
-      </Tabs>
-      {loadError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {loadError}
-        </Alert>
-      )}
-      <Box role="tabpanel" id={`check-panel-${tab}`} aria-labelledby={`check-tab-${tab}`}>
-        {loading ? (
-          <Box sx={{ textAlign: 'center', py: 5 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <>
-            {tab === 'plans' && (
-              <>
-                <Paper variant="outlined" sx={{ overflow: 'hidden', bgcolor: 'background.paper' }}>
-                  {!profiles.length && (
-                    <Typography color="text.secondary" sx={{ p: 4, textAlign: 'center' }}>
-                      {t('detectionCenter.emptyPlans')}
-                    </Typography>
-                  )}
-                  {profiles.map((p) => (
-                    <Box
-                      key={p.id}
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', md: 'minmax(140px, 1fr) minmax(180px, 1.7fr) auto' },
-                        gap: 2,
-                        alignItems: 'center',
-                        p: 2.5,
-                        borderBottom: 1,
-                        borderColor: 'divider'
-                      }}
-                    >
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="subtitle1" sx={{ overflowWrap: 'anywhere' }}>
-                          {p.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {t('detectionCenter.jobCount', { count: jobs.filter((job) => job.profileId === p.id).length })} ·{' '}
-                          {t('nodes.nodeCheckProfiles.timeout', { seconds: p.timeout })}
-                        </Typography>
-                      </Box>
-                      <Stack direction="row" gap={0.75} flexWrap="wrap">
-                        {modules(p).map((label, index) => (
-                          <Chip size="small" key={`${label}-${index}`} label={label} color="primary" variant="outlined" />
-                        ))}
-                      </Stack>
-                      <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Button onClick={() => setPlanEditor(p)} disabled={busy}>
-                          {t('detectionCenter.configure')}
-                        </Button>
-                        <Button variant="outlined" startIcon={<PlayArrowIcon />} onClick={() => openRun(p)} disabled={busy}>
-                          {t('detectionCenter.run')}
-                        </Button>
-                        <Tooltip title={t('common.delete')}>
-                          <span>
-                            <IconButton aria-label={t('common.delete')} color="error" onClick={() => removePlan(p)} disabled={busy}>
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </Stack>
-                    </Box>
-                  ))}
-                </Paper>
-              </>
-            )}
-            {tab === 'jobs' && (
-              <Stack spacing={2}>
-                {jobs.length === 0 && (
-                  <Typography sx={{ p: 4, textAlign: 'center' }} color="text.secondary">
-                    {t('detectionCenter.noJobs')}
+      </Stack>
+      <Box sx={{ container: 'detection-center / inline-size', p: { xs: 1.25, sm: 2 } }}>
+        {loadError && (
+          <Alert severity="error" sx={{ mb: 1.5 }}>
+            {loadError}
+          </Alert>
+        )}
+        <Box role="tabpanel" id="check-panel-plans" aria-labelledby="check-tab-plans" hidden={tab !== 'plans'}>
+          {tab === 'plans' &&
+            (loading ? (
+              <LoadingIndicator />
+            ) : (
+              <Paper variant="outlined" sx={{ overflow: 'hidden', bgcolor: 'background.paper' }}>
+                {!profiles.length && (
+                  <Typography color="text.secondary" sx={{ p: 3, textAlign: 'center' }}>
+                    {t('detectionCenter.emptyPlans')}
                   </Typography>
                 )}
-                {jobs.map((job) => (
-                  <Paper variant="outlined" key={job.id} sx={{ p: 2.5, bgcolor: 'background.paper' }}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1}>
-                      <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
-                        <Typography variant="subtitle1" sx={{ overflowWrap: 'anywhere' }}>
-                          {job.name}
-                        </Typography>
-                        {job.legacy && <Chip label={t('detectionCenter.legacy')} size="small" variant="outlined" />}
-                        {job.running && <Chip label={t('tasks.status.running')} size="small" color="info" />}
-                      </Stack>
-                      <FormControlLabel
-                        sx={{ mr: 0 }}
-                        label={t('detectionCenter.autoEnabled')}
-                        control={
-                          <Switch
-                            checked={job.enabled}
-                            disabled={busy}
-                            onChange={(_, enabled) => action(() => saveNodeCheckJob({ ...job, enabled }), t('common.saveSuccess'))}
-                          />
-                        }
-                      />
-                    </Stack>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2, my: 2 }}>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          {t('detectionCenter.plan')}
-                        </Typography>
-                        <Typography>{profiles.find((p) => p.id === job.profileId)?.name || t('detectionCenter.missingPlan')}</Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          {t('detectionCenter.scope')}
-                        </Typography>
-                        <Typography>{t(`detectionCenter.scopes.${job.scope}`)}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {[...(job.groups || []), ...(job.tags || [])].join(' · ')}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          {t('detectionCenter.trigger')}
-                        </Typography>
-                        <Typography>{t(`detectionCenter.triggers.${job.trigger}`)}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {job.trigger === 'scheduled' ? job.cronExpr : '—'} · {timezone}
-                        </Typography>
-                      </Box>
+                {profiles.map((p) => (
+                  <Box
+                    key={p.id}
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(0, 1fr)',
+                      '@container detection-center (min-width: 640px)': {
+                        gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.6fr) auto'
+                      },
+                      gap: 1,
+                      alignItems: 'center',
+                      px: 1.5,
+                      py: 1,
+                      '&:not(:last-child)': { borderBottom: 1, borderColor: 'divider' }
+                    }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ overflowWrap: 'anywhere', fontWeight: 600 }}>
+                        {p.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {t('detectionCenter.jobCount', { count: jobs.filter((job) => job.profileId === p.id).length })} ·{' '}
+                        {t('nodes.nodeCheckProfiles.timeout', { seconds: p.timeout })}
+                      </Typography>
                     </Box>
-                    <Typography variant="caption" display="block" color="text.secondary">
-                      {t('detectionCenter.runTimes', { last: date(job.lastRunTime), next: date(job.nextRunTime) })}
-                    </Typography>
-                    {job.lastError && (
-                      <Alert severity="warning" sx={{ mt: 1 }}>
-                        {job.lastError}
-                      </Alert>
-                    )}
-                    <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap">
-                      <Button startIcon={<EditIcon />} onClick={() => setJobEditor(job)} disabled={busy}>
-                        {t('common.edit')}
+                    <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ minWidth: 0 }}>
+                      {modules(p).map((label, index) => (
+                        <Chip
+                          size="small"
+                          key={`${label}-${index}`}
+                          label={label}
+                          color="primary"
+                          variant="outlined"
+                          sx={{ height: 'auto', minHeight: 24, '& .MuiChip-label': { whiteSpace: 'normal', overflowWrap: 'anywhere' } }}
+                        />
+                      ))}
+                    </Stack>
+                    <Stack direction="row" gap={0.5} flexWrap="wrap" alignItems="center">
+                      <Button size="small" onClick={() => setPlanEditor(p)} disabled={busy}>
+                        {t('detectionCenter.configure')}
                       </Button>
-                      <Button
-                        startIcon={<PlayArrowIcon />}
-                        onClick={() => action(() => runNodeCheckJob(job.id), t('nodes.nodeCheckProfiles.messages.started'))}
-                        disabled={busy || job.running}
-                      >
+                      <Button size="small" variant="outlined" startIcon={<PlayArrowIcon />} onClick={() => openRun(p)} disabled={busy}>
                         {t('detectionCenter.run')}
                       </Button>
-                      <Button color="error" onClick={() => removeJob(job)} disabled={busy || job.running}>
-                        {t('common.delete')}
-                      </Button>
+                      <Tooltip title={t('common.delete')}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            aria-label={t('common.delete')}
+                            color="error"
+                            onClick={() => removePlan(p)}
+                            disabled={busy}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                     </Stack>
-                  </Paper>
+                  </Box>
                 ))}
-              </Stack>
-            )}
-          </>
-        )}
+              </Paper>
+            ))}
+        </Box>
+        <Box role="tabpanel" id="check-panel-jobs" aria-labelledby="check-tab-jobs" hidden={tab !== 'jobs'}>
+          {tab === 'jobs' &&
+            (loading ? (
+              <LoadingIndicator />
+            ) : (
+              <CheckJobList
+                jobs={jobs}
+                profiles={profiles}
+                timezone={timezone}
+                busy={busy}
+                onEdit={setJobEditor}
+                onRun={(job) => action(() => runNodeCheckJob(job.id), t('nodes.nodeCheckProfiles.messages.started'))}
+                onRemove={removeJob}
+                onToggle={(job, enabled) => action(() => saveNodeCheckJob({ ...job, enabled }), t('common.saveSuccess'))}
+              />
+            ))}
+        </Box>
       </Box>
       <NodeCheckProfileFormDialog
         open={planEditor !== null}
@@ -429,6 +367,14 @@ export default function NodeCheckList() {
           {message?.text}
         </Alert>
       </Snackbar>
-    </MainCard>
+    </Paper>
+  );
+}
+
+function LoadingIndicator() {
+  return (
+    <Box sx={{ textAlign: 'center', py: 3 }}>
+      <CircularProgress size={28} />
+    </Box>
   );
 }

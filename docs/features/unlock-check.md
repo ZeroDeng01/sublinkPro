@@ -314,7 +314,7 @@ The first version's goal is:
 
 ## Detection center
 
-The page provides **Detection plans** and **Automatic jobs**.
+The page provides **Detection plans** and **Automatic jobs**. Compare job plans, scopes, and run times in the table on wider screens. On narrow screens, use each job card to enable, disable, edit, run, or delete the job.
 
 1. Create a plan, choose the checks to run, and adjust URLs, timeout and concurrency under **Advanced settings** as needed.
 2. Create an automatic job, select a plan and node scope, then choose a schedule or **After airport update**. Airport, source-group and tag selections intersect.
