@@ -68,7 +68,7 @@ import {
 
 // utils
 import { withAlpha } from 'utils/colorUtils';
-import { validateCronExpression } from './utils';
+import { parseAirportPriority, validateCronExpression } from './utils';
 
 // ==============================|| 机场管理 ||============================== //
 
@@ -137,6 +137,7 @@ const normalizeRequestHeadersForSubmit = (requestHeaders, t) => {
 const createAirportFormState = (overrides = {}) => ({
   id: 0,
   name: '',
+  priority: '0',
   url: '',
   cronExpr: '0 */12 * * *',
   enabled: true,
@@ -526,6 +527,7 @@ export default function AirportList() {
     const editForm = createAirportFormState({
       id: airport.id,
       name: airport.name,
+      priority: String(airport.priority ?? 0),
       url: airport.url,
       cronExpr: airport.cronExpr,
       enabled: airport.enabled,
@@ -750,6 +752,11 @@ export default function AirportList() {
       showMessage(t('airports.page.messages.nameRequired'), 'warning');
       return;
     }
+    const priority = parseAirportPriority(airportForm.priority);
+    if (priority === null) {
+      showMessage(t('airports.page.messages.priorityInvalid'), 'warning');
+      return;
+    }
     if (!airportForm.url.trim()) {
       showMessage(t('airports.page.messages.urlRequired'), 'warning');
       return;
@@ -781,6 +788,7 @@ export default function AirportList() {
     try {
       const normalizedAirportForm = {
         ...airportForm,
+        priority,
         requestHeaders
       };
 

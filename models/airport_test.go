@@ -47,6 +47,28 @@ func setupAirportTestDB(t *testing.T) {
 	})
 }
 
+func TestAirportPriorityMigrationDefaultsExistingRowsToZero(t *testing.T) {
+	db := testutil.OpenMemoryDB(t, "airport_priority_migration")
+	t.Cleanup(func() { testutil.CloseDB(t, db) })
+	if err := db.Exec("CREATE TABLE airports (id integer PRIMARY KEY AUTOINCREMENT, name text)").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO airports (name) VALUES (?), (?)", "First", "Second").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.AutoMigrate(&Airport{}); err != nil {
+		t.Fatal(err)
+	}
+
+	var count int64
+	if err := db.Model(&Airport{}).Where("priority = ?", 0).Count(&count).Error; err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Fatalf("existing airports with priority 0 = %d, want 2", count)
+	}
+}
+
 func TestAirportDeleteCleansSubscriptionAirportRelations(t *testing.T) {
 	setupAirportTestDB(t)
 
@@ -103,7 +125,7 @@ func TestAirportUpdatePersistsUpdateAfterDetectSettings(t *testing.T) {
 	airport.UpdateAfterDetectProfileID = 0
 	airport.UpdateAfterDetectChangedOnly = false
 
-	if err := airport.Update(); err != nil {
+	if err := airport.Update(nil); err != nil {
 		t.Fatalf("update airport: %v", err)
 	}
 
@@ -147,7 +169,7 @@ func TestAirportBackfillCountryImpliesAutoFillCountryOnSave(t *testing.T) {
 
 	stored.AutoFillCountry = false
 	stored.BackfillExistingCountry = true
-	if err := stored.Update(); err != nil {
+	if err := stored.Update(nil); err != nil {
 		t.Fatalf("update airport: %v", err)
 	}
 

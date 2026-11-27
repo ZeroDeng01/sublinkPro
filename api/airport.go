@@ -208,6 +208,9 @@ func AirportAdd(c *gin.Context) {
 		AutoFillCountry:              req.AutoFillCountry,
 		BackfillExistingCountry:      req.BackfillExistingCountry,
 	}
+	if req.Priority != nil {
+		airport.Priority = *req.Priority
+	}
 
 	// 检查是否重复
 	if err := airport.Find(); err == nil {
@@ -308,7 +311,7 @@ func AirportUpdate(c *gin.Context) {
 	existing.AutoFillCountry = req.AutoFillCountry
 	existing.BackfillExistingCountry = req.BackfillExistingCountry
 
-	if err := existing.Update(); err != nil {
+	if err := existing.Update(req.Priority); err != nil {
 		utils.FailWithMsg(c, "更新失败: "+err.Error())
 		return
 	}

@@ -5,6 +5,15 @@ export const getAirportTestState = (nodeStats, nodeCount) => {
   return hasTestData ? 'tested' : 'untested';
 };
 
+export const parseAirportPriority = (value) => {
+  const input = value.trim();
+  if (input === '') return 0;
+  if (!/^[+-]?\d+$/.test(input)) return null;
+
+  const priority = Number(input);
+  return priority >= -2147483648 && priority <= 2147483647 ? priority : null;
+};
+
 // Cron 表达式验证
 export const validateCronExpression = (cron) => {
   if (!cron) return false;

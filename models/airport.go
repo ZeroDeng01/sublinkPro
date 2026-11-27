@@ -68,6 +68,7 @@ func (h *AirportRequestHeaders) Scan(value any) error {
 type Airport struct {
 	ID                int                   `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name              string                `json:"name"`                                   // 机场名称（唯一）
+	Priority          int32                 `gorm:"not null;default:0" json:"priority"`     // 列表排序值，越大越靠前
 	URL               string                `json:"url"`                                    // 订阅地址
 	CronExpr          string                `json:"cronExpr"`                               // 定时更新Cron表达式
 	Enabled           bool                  `json:"enabled"`                                // 是否启用
@@ -153,9 +154,9 @@ func (a *Airport) Add() error {
 }
 
 // Update 更新机场 (Write-Through)
-func (a *Airport) Update() error {
+func (a *Airport) Update(priority *int32) error {
 	a.normalizeCountryFillSettings()
-	err := database.DB.Model(a).Select(
+	fields := []string{
 		"Name", "URL", "CronExpr", "Enabled", "LastRunTime", "NextRunTime",
 		"SuccessCount", "Group", "DownloadWithProxy", "ProxyLink", "UserAgent",
 		"RequestHeaders",
@@ -163,7 +164,12 @@ func (a *Airport) Update() error {
 		"NodeNameWhitelist", "NodeNameBlacklist", "ProtocolWhitelist", "ProtocolBlacklist", "NodeNamePreprocess",
 		"DeduplicationRule", "NodeNameUniquify", "NodeNamePrefix", "NodeNameIntraUniquify",
 		"AutoFillCountry", "BackfillExistingCountry",
-	).Updates(a).Error
+	}
+	if priority != nil {
+		a.Priority = *priority
+		fields = append(fields, "Priority")
+	}
+	err := database.DB.Model(a).Select(fields).Updates(a).Error
 	if err != nil {
 		return err
 	}
@@ -206,19 +212,21 @@ func HasAirportIdentityConflict(excludeID int, name, url string) (bool, error) {
 	return checkAirport.ID != excludeID, nil
 }
 
+func airportListLess(a, b Airport) bool {
+	if a.Priority != b.Priority {
+		return a.Priority > b.Priority
+	}
+	return a.ID < b.ID
+}
+
 // List 获取所有机场
 func (a *Airport) List() ([]Airport, error) {
-	airports := airportCache.GetAllSorted(func(x, y Airport) bool {
-		return x.ID < y.ID
-	})
-	return airports, nil
+	return airportCache.GetAllSorted(airportListLess), nil
 }
 
 // ListPaginated 分页获取机场列表
 func (a *Airport) ListPaginated(page, pageSize int) ([]Airport, int64, error) {
-	allAirports := airportCache.GetAllSorted(func(x, y Airport) bool {
-		return x.ID < y.ID
-	})
+	allAirports := airportCache.GetAllSorted(airportListLess)
 	total := int64(len(allAirports))
 
 	if page <= 0 || pageSize <= 0 {
@@ -248,9 +256,7 @@ type AirportFilter struct {
 // ListWithFilter 带筛选条件的分页获取机场列表
 func (a *Airport) ListWithFilter(page, pageSize int, filter AirportFilter) ([]Airport, int64, error) {
 	// 从缓存获取所有数据
-	allAirports := airportCache.GetAllSorted(func(x, y Airport) bool {
-		return x.ID < y.ID
-	})
+	allAirports := airportCache.GetAllSorted(airportListLess)
 
 	// 应用筛选条件
 	var filteredAirports []Airport

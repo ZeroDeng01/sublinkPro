@@ -104,6 +104,12 @@ This gives a direct overview of airport usage.
 
 After “post update check” is enabled, checks are triggered only when the current airport subscription updates successfully. The check range is limited to nodes from this airport's latest update. It does not wait for the node check profile's own schedule, and it does not expand to nodes from other airports. If “only check changed and new nodes” is enabled, SublinkPro checks only nodes that were added or updated during this fetch; when there are no added or updated nodes, it skips the post update check instead of falling back to all airport nodes. Node check tasks triggered by this feature are marked as “airport update” in Task Center, so they can be distinguished from “manual” and “scheduled” triggers.
 
+### Sort airports
+
+Set **Sort priority** in **Basic Information** when adding or editing an airport. The default is `0` and both positive and negative integers are accepted. Higher priorities appear first. Airports with the same priority are ordered by ID, lowest first.
+
+The order applies across filtered and paginated results, as well as to the airport lists in the dashboard, subscription editor, node checks, and Telegram.
+
 ### Node processing: filters and rename rules
 
 In “Node Processing, applied during fetch” inside the airport edit dialog, you can configure:

@@ -32,6 +32,7 @@ type UserAccessKey struct {
 type AirportRequest struct {
 	ID                           int                    `json:"id"`
 	Name                         string                 `json:"name" binding:"required"`
+	Priority                     *int32                 `json:"priority"`
 	URL                          string                 `json:"url" binding:"required,url"`
 	CronExpr                     string                 `json:"cronExpr" binding:"required"`
 	Enabled                      bool                   `json:"enabled"`

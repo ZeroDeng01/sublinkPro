@@ -255,6 +255,7 @@
         "noNodesForSource": "No nodes found for source \"{{source}}\"",
         "loadAirportNodesFailed": "Failed to load airport nodes",
         "nameRequired": "Enter an airport name",
+        "priorityInvalid": "Sort priority must be an integer from -2147483648 to 2147483647",
         "urlRequired": "Enter a subscription URL",
         "urlInvalid": "Enter a valid subscription URL",
         "detectProfileRequired": "Select a check strategy first",
@@ -287,12 +288,14 @@
         "logoOptional": "Logo (optional)",
         "subscriptionUrl": "Subscription URL",
         "nodeGroup": "Node group",
+        "priority": "Sort priority",
         "remark": "Remark"
       },
       "helpers": {
         "name": "Airport names must be unique. The name is used as the node source.",
         "subscriptionUrl": "Supports Clash YAML subscriptions and V2Ray Base64 subscriptions",
         "nodeGroup": "Nodes imported from this airport will automatically belong to this group",
+        "priority": "Defaults to 0. Higher numbers appear first. Ties are ordered by ID, lowest first.",
         "remark": "Optional notes to help you manage airports and subscriptions",
         "userAgent": "User-Agent used when pulling subscriptions. Leave blank if not needed."
       },

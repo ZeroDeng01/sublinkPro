@@ -242,6 +242,14 @@ export default function AirportFormDialog({
               <TextField
                 fullWidth
                 size="small"
+                label={t('airports.form.fields.priority')}
+                value={airportForm.priority}
+                helperText={t('airports.form.helpers.priority')}
+                onChange={(e) => setAirportForm({ ...airportForm, priority: e.target.value })}
+              />
+              <TextField
+                fullWidth
+                size="small"
                 label={t('airports.form.fields.remark')}
                 value={airportForm.remark}
                 placeholder={t('airports.form.placeholders.remark')}
@@ -728,6 +736,7 @@ AirportFormDialog.propTypes = {
   airportForm: PropTypes.shape({
     id: PropTypes.number,
     name: PropTypes.string,
+    priority: PropTypes.string.isRequired,
     url: PropTypes.string,
     cronExpr: PropTypes.string,
     enabled: PropTypes.bool,

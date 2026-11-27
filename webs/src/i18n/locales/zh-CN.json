@@ -255,6 +255,7 @@
         "noNodesForSource": "未找到来源为「{{source}}」的节点",
         "loadAirportNodesFailed": "获取机场节点失败",
         "nameRequired": "请输入机场名称",
+        "priorityInvalid": "排序值必须是 -2147483648 到 2147483647 之间的整数",
         "urlRequired": "请输入订阅地址",
         "urlInvalid": "请输入有效的订阅地址",
         "detectProfileRequired": "请先选择更新后检测策略",
@@ -287,12 +288,14 @@
         "logoOptional": "Logo（可选）",
         "subscriptionUrl": "订阅地址",
         "nodeGroup": "节点分组",
+        "priority": "排序值",
         "remark": "备注"
       },
       "helpers": {
         "name": "机场名称不能重复，名称将作为节点来源",
         "subscriptionUrl": "支持 Clash YAML 订阅和 V2Ray Base64 订阅",
         "nodeGroup": "从此机场导入的节点将自动归属到此分组",
+        "priority": "默认 0，整数越大越靠前。同值按 ID 升序排列。",
         "remark": "一些备注信息，方便你对机场和订阅进行管理",
         "userAgent": "拉取订阅时使用的 User-Agent，可留空"
       },

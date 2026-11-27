@@ -544,9 +544,11 @@ Base: `/api/v1/airports` (all write bodies are JSON)
 
 All airport endpoints are demo-restricted, including the list and detail reads.
 
+List and detail responses include `priority`, a signed 32-bit integer. Lists are ordered by descending `priority` and then ascending `id` before pagination, including filtered lists. Existing airports and new airports created without `priority` default to `0`. On update, omit `priority` to retain its current value or send `0` to reset it.
+
 - **GET** `/airports` (query: `?page=1&pageSize=20`) — list. Each item includes `nodeStats.hasTestedNodes`: whether any current node has a latency/speed check timestamp or terminal status (`success`, `timeout`, `error`), including failed checks. `delayPassCount` / `speedPassCount` remain latency/download pass counts; `0 / 0` does not imply untested. This is current-node evidence, not task progress or run completion; removed nodes no longer contribute.
 - **GET** `/airports/{id}` — one
-- **POST** `/airports` — **JSON** create. Key fields (see `dto.AirportRequest`): `name`(required), `url`(required, valid URL), `cronExpr`(required), `enabled`, `group`, `downloadWithProxy`, `proxyLink`, `userAgent`, `fetchUsageInfo`, `skipTLSVerify`, plus filter/rename/dedup fields (`nodeNameWhitelist`, `nodeNameBlacklist`, `protocolWhitelist`, `protocolBlacklist`, `nodeNamePreprocess`, `deduplicationRule`, `nodeNameUniquify`, ...), and country-fill fields (`autoFillCountry`, `backfillExistingCountry`).
+- **POST** `/airports` — **JSON** create. Key fields (see `dto.AirportRequest`): `name`(required), `url`(required, valid URL), `cronExpr`(required), `priority`, `enabled`, `group`, `downloadWithProxy`, `proxyLink`, `userAgent`, `fetchUsageInfo`, `skipTLSVerify`, plus filter/rename/dedup fields (`nodeNameWhitelist`, `nodeNameBlacklist`, `protocolWhitelist`, `protocolBlacklist`, `nodeNamePreprocess`, `deduplicationRule`, `nodeNameUniquify`, ...), and country-fill fields (`autoFillCountry`, `backfillExistingCountry`).
 - **PUT** `/airports/{id}` — **JSON** update (same schema)
 - **POST** `/airports/batch-update` — **JSON** `{ids:[...], applyGroup, group, applySchedule, cronExpr}`
 - **DELETE** `/airports/{id}` (query: `?deleteNodes=false`)
