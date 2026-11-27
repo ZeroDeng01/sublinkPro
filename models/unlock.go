@@ -212,14 +212,19 @@ func BuildUnlockSummaryJSON(summary UnlockSummary) string {
 }
 
 func ParseUnlockSummary(raw string) UnlockSummary {
+	summary, _ := parseUnlockSummary(raw)
+	return summary
+}
+
+func parseUnlockSummary(raw string) (UnlockSummary, error) {
 	if strings.TrimSpace(raw) == "" {
-		return UnlockSummary{}
+		return UnlockSummary{}, nil
 	}
 	var summary UnlockSummary
 	if err := json.Unmarshal([]byte(raw), &summary); err != nil {
-		return UnlockSummary{}
+		return UnlockSummary{}, err
 	}
-	return summary
+	return summary, nil
 }
 
 func BuildUnlockAggregate(summaries []UnlockSummary, providers []string) UnlockAggregate {
@@ -454,7 +459,10 @@ func MatchUnlockSummaryRulesWithMode(summary UnlockSummary, rules []UnlockFilter
 }
 
 func BuildUnlockRenameValue(raw string, provider string) string {
-	summary := ParseUnlockSummary(raw)
+	return buildUnlockRenameValue(ParseUnlockSummary(raw), provider)
+}
+
+func buildUnlockRenameValue(summary UnlockSummary, provider string) string {
 	if len(summary.Providers) == 0 {
 		return "未检测"
 	}
@@ -481,8 +489,47 @@ func BuildUnlockRenameValue(raw string, provider string) string {
 	return strings.Join(parts, "-")
 }
 
+// A provider variable needs only these fields. Historical summaries may have
+// differently typed metadata which the original provider variable ignored.
+func parseRenameUnlockProviders(raw string) []UnlockProviderResult {
+	var summary struct {
+		Providers []struct {
+			Provider string `json:"provider"`
+			Status   string `json:"status"`
+			Region   string `json:"region"`
+		} `json:"providers"`
+	}
+	if err := json.Unmarshal([]byte(raw), &summary); err != nil {
+		return nil
+	}
+	providers := make([]UnlockProviderResult, 0, len(summary.Providers))
+	for _, result := range summary.Providers {
+		providers = append(providers, UnlockProviderResult{Provider: result.Provider, Status: result.Status, Region: result.Region})
+	}
+	return providers
+}
+
+func buildRenameUnlockLookup(providers []UnlockProviderResult) utils.RenameUnlockLookup {
+	if len(providers) == 0 {
+		return nil
+	}
+	return func(provider string) (string, string, bool) {
+		key := NormalizeUnlockProvider(provider)
+		for _, result := range providers {
+			if NormalizeUnlockProvider(result.Provider) == key {
+				return result.Status, result.Region, true
+			}
+		}
+		return "", "", false
+	}
+}
+
 func BuildNodeRenameInfo(node Node, processedLinkName string, protocol string, index int, duplicateIndex int) utils.NodeInfo {
-	summary := ParseUnlockSummary(node.UnlockSummary)
+	summary, err := parseUnlockSummary(node.UnlockSummary)
+	providers := summary.Providers
+	if err != nil {
+		providers = parseRenameUnlockProviders(node.UnlockSummary)
+	}
 	primaryUnlockStatus := "未检测"
 	primaryUnlockLabel := "未检测"
 	primaryUnlockRegion := ""
@@ -500,29 +547,29 @@ func BuildNodeRenameInfo(node Node, processedLinkName string, protocol string, i
 	}
 
 	return utils.NodeInfo{
-		Name:            node.EffectiveName(),
-		LinkName:        processedLinkName,
-		LinkCountry:     node.LinkCountry,
-		LinkCountryName: linkCountryName,
-		Speed:           node.Speed,
-		SpeedStatus:     node.SpeedStatus,
-		DelayTime:       node.DelayTime,
-		DelayStatus:     node.DelayStatus,
-		Group:           node.Group,
-		Source:          node.Source,
-		Index:           index,
-		DuplicateIndex:  duplicateIndex,
-		Protocol:        protocol,
-		Tags:            node.Tags,
-		IsBroadcast:     node.IsBroadcast,
-		IsResidential:   node.IsResidential,
-		FraudScore:      node.FraudScore,
-		QualityStatus:   node.QualityStatus,
-		QualityFamily:   node.QualityFamily,
-		UnlockRaw:       node.UnlockSummary,
-		UnlockSummary:   BuildUnlockRenameValue(node.UnlockSummary, ""),
-		UnlockStatus:    primaryUnlockStatus,
-		UnlockLabel:     primaryUnlockLabel,
-		UnlockRegion:    primaryUnlockRegion,
+		Name:               node.EffectiveName(),
+		LinkName:           processedLinkName,
+		LinkCountry:        node.LinkCountry,
+		LinkCountryName:    linkCountryName,
+		Speed:              node.Speed,
+		SpeedStatus:        node.SpeedStatus,
+		DelayTime:          node.DelayTime,
+		DelayStatus:        node.DelayStatus,
+		Group:              node.Group,
+		Source:             node.Source,
+		Index:              index,
+		DuplicateIndex:     duplicateIndex,
+		Protocol:           protocol,
+		Tags:               node.Tags,
+		IsBroadcast:        node.IsBroadcast,
+		IsResidential:      node.IsResidential,
+		FraudScore:         node.FraudScore,
+		QualityStatus:      node.QualityStatus,
+		QualityFamily:      node.QualityFamily,
+		LookupUnlockResult: buildRenameUnlockLookup(providers),
+		UnlockSummary:      buildUnlockRenameValue(summary, ""),
+		UnlockStatus:       primaryUnlockStatus,
+		UnlockLabel:        primaryUnlockLabel,
+		UnlockRegion:       primaryUnlockRegion,
 	}
 }

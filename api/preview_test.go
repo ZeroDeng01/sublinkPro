@@ -1,11 +1,21 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
+	"strings"
 	"testing"
 
 	"sublink/database"
 	"sublink/internal/testutil"
 	"sublink/models"
+	"sublink/utils"
+
+	"github.com/gin-gonic/gin"
 )
 
 func setupPreviewAPITestDB(t *testing.T) {
@@ -45,6 +55,89 @@ func setupPreviewAPITestDB(t *testing.T) {
 		}
 		testutil.CloseDB(t, db)
 	})
+}
+
+func TestSubscriptionServiceMarksRejectInvalidRequests(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const invalid = `$Name$ServiceMarks({"services":[]})`
+	for _, tt := range []struct {
+		name, body, contentType string
+		handler                 gin.HandlerFunc
+	}{
+		{"add", url.Values{"NodeNameRule": {invalid}}.Encode(), "application/x-www-form-urlencoded", SubAdd},
+		{"update", url.Values{"NodeNameRule": {invalid}}.Encode(), "application/x-www-form-urlencoded", SubUpdate},
+		{"preview", `{"NodeNameRule":` + strconv.Quote(invalid) + `}`, "application/json", PreviewSubscriptionNodes},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			ctx, _ := gin.CreateTestContext(response)
+			ctx.Request = httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/", strings.NewReader(tt.body))
+			ctx.Request.Header.Set("Content-Type", tt.contentType)
+			tt.handler(ctx)
+			var payload utils.Response
+			if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+				t.Fatal(err)
+			}
+			if payload.Code != 400 || payload.I18nKey != "subscriptions.rename.serviceMarks.errors.services" || payload.I18nParams["block"] != float64(1) {
+				t.Fatalf("unexpected response: %s", response.Body.String())
+			}
+		})
+	}
+}
+
+func TestPreviewSubscriptionResponsesIncludeRenderedNames(t *testing.T) {
+	setupClientsAPITestDB(t)
+	gin.SetMode(gin.TestMode)
+	const rule = `$Name$ServiceMarks({"prefix":" · ","services":[{"provider":"openai","label":"GPT","acceptedStatuses":["partial"],"region":true}]})`
+	node := models.Node{
+		Name: "preview-mark", LinkName: "preview-mark", Link: "ss://preview-mark", Source: "manual",
+		UnlockSummary: `{"providers":[{"provider":"openai","status":"partial","region":"JP"}]}`,
+	}
+	if err := node.Add(); err != nil {
+		t.Fatal(err)
+	}
+	sub := models.Subcription{Name: "preview-service-marks", NodeNameRule: rule, Nodes: []models.Node{node}}
+	if err := sub.Add(); err != nil {
+		t.Fatal(err)
+	}
+	if err := sub.AddNode(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name    string
+		request PreviewRequest
+	}{
+		{"form", PreviewRequest{NodeIDs: []int{node.ID}, NodeNameRule: rule}},
+		{"saved", PreviewRequest{SubscriptionID: sub.ID}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body, err := json.Marshal(tc.request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			recorder := httptest.NewRecorder()
+			ctx, _ := gin.CreateTestContext(recorder)
+			ctx.Request = httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", strings.NewReader(string(body)))
+			ctx.Request.Header.Set("Content-Type", "application/json")
+			PreviewSubscriptionNodes(ctx)
+			var response struct {
+				Code int
+				Data struct{ Nodes []map[string]json.RawMessage }
+			}
+			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil || response.Code != http.StatusOK || len(response.Data.Nodes) != 1 {
+				t.Fatalf("unexpected preview response: %s (%v)", recorder.Body.String(), err)
+			}
+			fields := response.Data.Nodes[0]
+			if string(fields["PreviewName"]) != `"preview-mark · GPT-JP"` || string(fields["EffectiveName"]) != `"preview-mark"` || string(fields["OriginalName"]) != `"preview-mark"` {
+				t.Fatalf("unexpected preview names: %s", recorder.Body.String())
+			}
+			for _, field := range []string{"PreviewLink", "CountryFlag", "Protocol"} {
+				if _, exists := fields[field]; !exists {
+					t.Errorf("response is missing %s", field)
+				}
+			}
+		})
+	}
 }
 
 func TestPreviewFormSubscriptionIncludesAirportIDs(t *testing.T) {

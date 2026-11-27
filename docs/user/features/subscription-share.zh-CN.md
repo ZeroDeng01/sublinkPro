@@ -110,6 +110,7 @@
 | `$Unlock` | 解锁摘要 |
 | `$Unlock(provider)` | 指定服务商的解锁结果，例如 `$Unlock(netflix)` |
 | `$UnlockStatus`、`$UnlockLabel`、`$UnlockRegion` | 可用时输出更细的解锁状态字段 |
+| `$ServiceMarks(...)` | 按服务和状态显示自定义解锁简称 |
 
 国家名称逻辑依赖节点已经保存的国家代码。例如节点的 `$LinkCountry = HK`，并且 `HK` 国家规则的国家名称是 `香港`，那么 `$LinkCountryName` 会输出 `香港`；如果这个国家代码没有对应国家规则，则 `$LinkCountryName` 会输出 `HK`。如果希望调整命名规则中的国家名称，请修改「应用设置 -> 国家规则」里的国家名称。
 
@@ -120,6 +121,18 @@
 ```
 
 对于名为 `Premium 01` 的香港节点，输出可能是 `[🇭🇰] 香港 - Premium 01`。如果后续节点生成了同名结果，`$DuplicateIndex` 可以为后续重名节点追加序号。
+
+### 解锁标记
+
+在「编辑订阅 → 节点命名规则」中选择「添加解锁标记」，然后选服务。每个服务默认在「解锁」时显示简称，可以修改简称、多选接受的状态和调整服务顺序。标记块可拖到名称中的任意位置。「显示选项」可开启地区后缀并修改前缀、分隔符和后缀。点击「预览节点」查看实际节点的输出。
+
+手动编辑时可使用以下规则。YouTube Premium 命中 `available` 时显示 `YT`，OpenAI 命中 `available` 或 `partial` 时显示 `GPT`。
+
+```text
+$Name$ServiceMarks({"prefix":" · ","services":[{"provider":"youtube_premium","label":"YT","acceptedStatuses":["available"]},{"provider":"openai","label":"GPT","acceptedStatuses":["available","partial"]}]})
+```
+
+标记按服务配置顺序输出，默认使用 ` · ` 连接。所有服务均未命中时，整个标记块及其前后缀省略。可在对应服务上设置 `"region":true`，将有地区的结果显示为 `GPT-US`。显示文本支持单行 Unicode 内容，ASCII 逗号、等号和控制字符会被拒绝。
 
 ## Mieru 输出说明
 

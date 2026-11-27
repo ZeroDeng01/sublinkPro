@@ -296,18 +296,27 @@ func (node *Node) NormalizeNameModeDefaults() {
 	node.EffectiveNameValue = node.EffectiveName()
 }
 
-// MarshalJSON 在所有节点 JSON 响应中补充 EffectiveName，同时保留原始 Name/LinkName。
-func (node Node) MarshalJSON() ([]byte, error) {
-	type nodeJSON Node
+type nodeJSON Node
+
+// nodeJSONResponse is shared by flat node responses with additional fields.
+// Embedding Node itself would promote MarshalJSON and omit those fields.
+type nodeJSONResponse struct {
+	nodeJSON
+	EffectiveName string `json:"EffectiveName"`
+}
+
+func (node Node) jsonResponse() nodeJSONResponse {
 	alias := nodeJSON(node)
 	alias.NameMode = NormalizeNodeNameMode(node.NameMode)
-	return json.Marshal(struct {
-		nodeJSON
-		EffectiveName string `json:"EffectiveName"`
-	}{
+	return nodeJSONResponse{
 		nodeJSON:      alias,
 		EffectiveName: node.EffectiveName(),
-	})
+	}
+}
+
+// MarshalJSON 在所有节点 JSON 响应中补充 EffectiveName，同时保留原始 Name/LinkName。
+func (node Node) MarshalJSON() ([]byte, error) {
+	return json.Marshal(node.jsonResponse())
 }
 
 func (node *Node) syncLinkHash() {

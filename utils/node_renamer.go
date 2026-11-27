@@ -34,15 +34,8 @@ func SetProtocolLinkFuncs(labelFunc func(string) string, renameFunc func(string,
 	renameNodeLinkFunc = renameFunc
 }
 
-type renameUnlockSummary struct {
-	Providers []renameUnlockProvider `json:"providers"`
-}
-
-type renameUnlockProvider struct {
-	Provider string `json:"provider"`
-	Status   string `json:"status"`
-	Region   string `json:"region,omitempty"`
-}
+// RenameUnlockLookup finds a service result in the node's saved unlock summary.
+type RenameUnlockLookup func(provider string) (status, region string, found bool)
 
 // replaceTagGroupVariables 替换规则中的 $TagGroup(xxx) 变量
 // rule: 包含 $TagGroup(xxx) 变量的规则字符串
@@ -88,30 +81,30 @@ func replaceTagGroupVariables(rule string, nodeTags string) string {
 
 // NodeInfo 节点信息结构体，用于重命名
 type NodeInfo struct {
-	Name            string  // 系统节点备注名称
-	LinkName        string  // 节点原始名称（来自订阅源）
-	LinkCountry     string  // 落地IP国家代码
-	LinkCountryName string  // 落地IP国家名称（从国家规则匹配，如果未匹配则为空）
-	Speed           float64 // 速度 (MB/s)
-	SpeedStatus     string  // 速度状态: untested/success/timeout/error
-	DelayTime       int     // 延迟 (ms)
-	DelayStatus     string  // 延迟状态: untested/success/timeout/error
-	Group           string  // 分组
-	Source          string  // 来源（手动添加/订阅名称）
-	Index           int     // 序号 (从1开始)
-	DuplicateIndex  int     // 同名序号索引（0=首个同名，1=第二个同名）
-	Protocol        string  // 协议类型
-	Tags            string  // 节点标签（逗号分隔）
-	IsBroadcast     bool    // IP来源：true=广播 false=原生
-	IsResidential   bool    // 是否住宅IP
-	FraudScore      int     // 欺诈评分（0-100，-1=未检测）
-	QualityStatus   string
-	QualityFamily   string
-	UnlockRaw       string
-	UnlockSummary   string
-	UnlockStatus    string
-	UnlockLabel     string
-	UnlockRegion    string
+	Name               string  // 系统节点备注名称
+	LinkName           string  // 节点原始名称（来自订阅源）
+	LinkCountry        string  // 落地IP国家代码
+	LinkCountryName    string  // 落地IP国家名称（从国家规则匹配，如果未匹配则为空）
+	Speed              float64 // 速度 (MB/s)
+	SpeedStatus        string  // 速度状态: untested/success/timeout/error
+	DelayTime          int     // 延迟 (ms)
+	DelayStatus        string  // 延迟状态: untested/success/timeout/error
+	Group              string  // 分组
+	Source             string  // 来源（手动添加/订阅名称）
+	Index              int     // 序号 (从1开始)
+	DuplicateIndex     int     // 同名序号索引（0=首个同名，1=第二个同名）
+	Protocol           string  // 协议类型
+	Tags               string  // 节点标签（逗号分隔）
+	IsBroadcast        bool    // IP来源：true=广播 false=原生
+	IsResidential      bool    // 是否住宅IP
+	FraudScore         int     // 欺诈评分（0-100，-1=未检测）
+	QualityStatus      string
+	QualityFamily      string
+	LookupUnlockResult RenameUnlockLookup
+	UnlockSummary      string
+	UnlockStatus       string
+	UnlockLabel        string
+	UnlockRegion       string
 }
 
 const (
@@ -373,9 +366,15 @@ func RenameNode(rule string, info NodeInfo) string {
 	if rule == "" {
 		return info.Name
 	}
+	result := strings.TrimSpace(NewNodeNameReplacer(info)(rule))
+	if result == "" {
+		return info.Name
+	}
+	return result
+}
 
-	result := rule
-
+// NewNodeNameReplacer prepares variable values that can be applied to each plain-text part of a rule.
+func NewNodeNameReplacer(info NodeInfo) func(string) string {
 	// 如果国家代码为空，使用"未知"
 	linkCountry := info.LinkCountry
 	if linkCountry == "" {
@@ -462,34 +461,19 @@ func RenameNode(rule string, info NodeInfo) string {
 		{"$Tags", tags}, // 所有标签（竖线｜分隔）
 	}
 
-	result = unlockRegex.ReplaceAllStringFunc(result, func(match string) string {
-		submatches := unlockRegex.FindStringSubmatch(match)
-		if len(submatches) < 2 {
-			return ""
+	return func(result string) string {
+		result = unlockRegex.ReplaceAllStringFunc(result, func(match string) string {
+			provider := strings.TrimSpace(match[len("$Unlock(") : len(match)-1])
+			if provider == "" {
+				return ""
+			}
+			return buildProviderUnlockValue(info.LookupUnlockResult, provider)
+		})
+		for _, r := range replacements {
+			result = strings.ReplaceAll(result, r.variable, r.value)
 		}
-		provider := strings.TrimSpace(submatches[1])
-		if provider == "" {
-			return ""
-		}
-		return buildProviderUnlockValue(info.UnlockRaw, provider)
-	})
-
-	for _, r := range replacements {
-		result = strings.ReplaceAll(result, r.variable, r.value)
+		return replaceTagGroupVariables(result, info.Tags)
 	}
-
-	// 处理 $TagGroup(xxx) 变量 - 查找节点在指定标签组中的标签
-	result = replaceTagGroupVariables(result, info.Tags)
-
-	// 清理连续空格和首尾空格
-	result = strings.TrimSpace(result)
-
-	// 如果结果为空，返回原始名称
-	if result == "" {
-		return info.Name
-	}
-
-	return result
 }
 
 // FormatDuplicateIndex 格式化同名编号变量。
@@ -500,34 +484,19 @@ func FormatDuplicateIndex(index int) string {
 	return fmt.Sprintf("%d", index)
 }
 
-func buildProviderUnlockValue(raw string, provider string) string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
+func buildProviderUnlockValue(lookup RenameUnlockLookup, provider string) string {
+	if lookup == nil {
 		return "未检测"
 	}
-	var summary renameUnlockSummary
-	if err := json.Unmarshal([]byte(trimmed), &summary); err != nil {
+	status, region, ok := lookup(provider)
+	if !ok {
 		return "未检测"
 	}
-	provider = normalizeUnlockProviderKey(provider)
-	for _, item := range summary.Providers {
-		if normalizeUnlockProviderKey(item.Provider) != provider {
-			continue
-		}
-		parts := []string{formatUnlockStatusLabel(item.Status)}
-		if item.Region != "" {
-			parts = append(parts, item.Region)
-		}
-		return strings.Join(parts, "-")
+	label := formatUnlockStatusLabel(status)
+	if region != "" {
+		return label + "-" + region
 	}
-	return "未检测"
-}
-
-func normalizeUnlockProviderKey(provider string) string {
-	key := strings.ToLower(strings.TrimSpace(provider))
-	key = strings.ReplaceAll(key, " ", "_")
-	key = strings.ReplaceAll(key, "-", "_")
-	return strings.Trim(key, "_")
+	return label
 }
 
 func formatUnlockStatusLabel(status string) string {

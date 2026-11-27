@@ -2577,7 +2577,34 @@
       "categories": {
         "basic": "Basic variables",
         "quality": "Quality variables",
-        "unlock": "Unlock variables"
+        "unlock": "Unlock results"
+      },
+      "serviceMarks": {
+        "title": "Unlock marks",
+        "add": "Add unlock marks",
+        "hint": "Show a short label when a selected status matches.",
+        "addService": "Choose a service",
+        "label": "Short label",
+        "statuses": "Show for these statuses",
+        "displayOptions": "Display options",
+        "region": "Show region suffix",
+        "prefix": "Prefix",
+        "separator": "Separator between marks",
+        "suffix": "Suffix",
+        "moveUp": "Move {{service}} up",
+        "moveDown": "Move {{service}} down",
+        "remove": "Remove {{service}}",
+        "done": "Done",
+        "samplePreview": "Example preview",
+        "errors": {
+          "syntax": "Unlock marks block {{block}} has an invalid format.",
+          "services": "Select at least one service for unlock marks block {{block}}.",
+          "provider": "An entry in unlock marks block {{block}} is missing its service.",
+          "duplicate": "Unlock marks block {{block}} includes {{provider}} more than once.",
+          "label": "Enter a short label for {{provider}} in unlock marks block {{block}}.",
+          "statuses": "Select at least one valid status for {{provider}} in unlock marks block {{block}}.",
+          "text": "Display text in unlock marks block {{block}} cannot contain ASCII commas, equals signs, or control characters."
+        }
       },
       "vars": {
         "protocol": "Protocol",

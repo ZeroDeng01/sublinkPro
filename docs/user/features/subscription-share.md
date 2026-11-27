@@ -112,6 +112,7 @@ Common variables:
 | `$Unlock` | Unlock summary |
 | `$Unlock(provider)` | Unlock result for a specific provider key, such as `$Unlock(netflix)` |
 | `$UnlockStatus`, `$UnlockLabel`, `$UnlockRegion` | Detailed unlock status fields when available |
+| `$ServiceMarks(...)` | Custom short unlock labels selected by service and status |
 
 Country-name logic depends on the node's stored country code. For example, if a node has `$LinkCountry = HK` and the `HK` country rule name is `香港`, `$LinkCountryName` becomes `香港`; if the country code has no matching country rule, `$LinkCountryName` renders as `HK`. To change displayed country names in naming rules, update the country name in `Settings -> Country Rules`.
 
@@ -122,6 +123,18 @@ Example rule:
 ```
 
 For a Hong Kong node named `Premium 01`, the output could become `[🇭🇰] 香港 - Premium 01`. If another output node resolves to the same name, `$DuplicateIndex` can add a suffix value for later duplicates.
+
+### Unlock marks
+
+In **Edit Subscription → Node Naming Rule**, choose **Add unlock marks**, then pick a service. Each service initially displays its short label for the **Unlocked** status. You can edit the label, select multiple statuses, and reorder the services. Drag the whole block anywhere in the name. **Display options** controls region suffixes, the prefix, the separator, and the suffix. Use **Preview nodes** to see the actual output for your nodes.
+
+In manual mode, the following rule renders `YT` for YouTube Premium with `available` and `GPT` for OpenAI with either `available` or `partial`.
+
+```text
+$Name$ServiceMarks({"prefix":" · ","services":[{"provider":"youtube_premium","label":"YT","acceptedStatuses":["available"]},{"provider":"openai","label":"GPT","acceptedStatuses":["available","partial"]}]})
+```
+
+Matching marks appear in service order, joined by ` · ` by default. When nothing matches, the whole block and its prefix and suffix are omitted. Set `"region":true` for a service to include its saved region when available, for example `GPT-US`. Display text accepts single-line Unicode and rejects ASCII commas, equals signs, and control characters.
 
 ## Mieru Output Notes
 

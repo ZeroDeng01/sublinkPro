@@ -943,6 +943,32 @@ func TestRenderPreparedClientUsesDuplicateIndexVariableForDuplicateProxyNames(t 
 	}
 }
 
+func TestRenderPreparedClientServiceMarks(t *testing.T) {
+	rule := `$Source$ServiceMarks({"prefix":" · ","services":[{"provider":"openai","label":"GPT","acceptedStatuses":["partial"]}]})$DuplicateIndex`
+	nodes := testClientProxyNameNodes(true)
+	nodes[0].UnlockSummary = `{"providers":[{"provider":"openai","status":"partial"}]}`
+	for _, client := range []string{"clash", "surge"} {
+		t.Run(client, func(t *testing.T) {
+			names := renderPreparedClientProxyNames(t, client, rule, nodes)
+			if got := strings.Join(names, "|"); got != "source-a · GPT|source-a · GPT1|source-a" {
+				t.Fatalf("proxy names = %q", got)
+			}
+		})
+	}
+
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/c/?client=uri", nil)
+	renderPreparedLinkSubscription(c, preparedClientResponse{
+		ClientType: "uri", Mode: clientResponseNormal, SubName: "service-marks",
+		Subscription: models.Subcription{NodeNameRule: rule, Nodes: nodes},
+	})
+	if got := recorder.Body.String(); !strings.Contains(got, "#source-a%20%C2%B7%20GPT\n") || !strings.Contains(got, "#source-a%20%C2%B7%20GPT1\n") {
+		t.Fatalf("URI output did not contain the same marked names: %s", got)
+	}
+}
+
 func TestRenderPreparedSurgeUsesSubscriptionUpdateIntervalSeconds(t *testing.T) {
 	setupClientsAPITestDB(t)
 	surgeTemplatePath := writeTestSurgeTemplate(t)

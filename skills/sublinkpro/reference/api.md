@@ -234,6 +234,8 @@ Demo mode restricts subscription and chain-rule mutations. Node and chain previe
 
 ### Preview Nodes (which nodes survive the filters)
 **POST** `/subcription/preview` accepts JSON with UpperCamel field names. To preview a saved subscription, send `{"SubscriptionID":123}`. To preview an unsaved form, omit `SubscriptionID` and send the form fields.
+
+Each entry in `data.Nodes` includes the node fields and the rendered `PreviewName` and `PreviewLink`, along with `OriginalName` and `CountryFlag`.
 ```json
 {
   "NodeIDs": [1,2,3], "NodeSorts": [0,1,2],
@@ -265,6 +267,14 @@ Demo mode restricts subscription and chain-rule mutations. Node and chain previe
 - `$DuplicateIndex` — empty for the first duplicate-name occurrence, then `1`, `2`, `3`, and so on.
 
 Other supported variables include `$Name`, `$LinkName`, `$Group`, `$Source`, `$Protocol`, `$Index`, `$Tags`, `$TagGroup(name)`, speed/delay variables, IP quality variables, and unlock variables such as `$Unlock` and `$Unlock(netflix)`.
+
+Use `$ServiceMarks(...)` for short labels based on a service's saved unlock status. Put a JSON object inside the parentheses. `services` lists entries with `provider`, `label`, and one or more `acceptedStatuses`. Set `region: true` on a service to append its saved region. The block accepts optional `prefix`, `suffix`, and `separator` strings. The default separator is ` · `, and the whole block disappears when no service matches.
+
+```text
+$Name$ServiceMarks({"prefix":" · ","services":[{"provider":"youtube_premium","label":"YT","acceptedStatuses":["available"]},{"provider":"openai","label":"GPT","acceptedStatuses":["available","partial"]}]})
+```
+
+Pass this rule as `NodeNameRule` in the existing subscription add, update, or preview request. Invalid mark blocks return an application code of `400` with `i18nKey` and `i18nParams` identifying the block. Use `GET /node-check/meta` to discover provider and status keys.
 
 ### Chain Proxy Rules (all under a subscription id; bodies are JSON)
 - **GET** `/subcription/{id}/chain-rules` — list

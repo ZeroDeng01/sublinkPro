@@ -56,8 +56,7 @@ import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { getReadableTextTokens, getSurfaceTokens } from 'themes/surfaceTokens';
 import { withAlpha } from 'utils/colorUtils';
-import { getFraudScoreIcon, QUALITY_STATUS_OPTIONS } from 'utils/fraudScore';
-import { getDelayIcon, getSpeedIcon } from 'utils/nodeMetricIcons';
+import { QUALITY_STATUS_OPTIONS } from 'utils/fraudScore';
 import { formatCountry } from 'utils/countryDisplay';
 import {
   formatUnlockProviderLabel,
@@ -1250,6 +1249,7 @@ export default function SubscriptionFormDialog({
                               ))}
                             </>
                           )}
+                          <br />• <code>$ServiceMarks(...)</code> - {t('subscriptions.rename.serviceMarks.hint')}
                           <br />• <code>$Tags</code> - {t('subscriptions.form.nameProcessing.varTags')} &nbsp;&nbsp; •{' '}
                           <code>$TagGroup(name)</code> - {t('subscriptions.form.nameProcessing.varTagGroup')}
                         </Typography>
@@ -1257,12 +1257,8 @@ export default function SubscriptionFormDialog({
                       {formData.nodeNameRule && (
                         <Alert variant={'standard'} severity="info" sx={{ mt: 1 }}>
                           <Typography variant="body2">
-                            <strong>{t('subscriptions.form.nameProcessing.preview')}</strong>{' '}
-                            {previewSubscriptionNodeName(formData.nodeNameRule, {
-                              speedIcon: getSpeedIcon(1.5, 'success'),
-                              delayIcon: getDelayIcon(125, 'success'),
-                              fraudScoreIcon: getFraudScoreIcon(12, 'success')
-                            })}
+                            <strong>{t('subscriptions.rename.serviceMarks.samplePreview')}</strong>{' '}
+                            {previewSubscriptionNodeName(formData.nodeNameRule)}
                           </Typography>
                         </Alert>
                       )}

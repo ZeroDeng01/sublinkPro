@@ -18,13 +18,10 @@ type NodeNamePlan struct {
 }
 
 type nodeNameOccurrence struct {
-	node              Node
-	nodeIndex         int
-	linkIndex         int
-	link              string
-	processedLinkName string
-	protocol          string
-	baseName          string
+	nodeIndex int
+	linkIndex int
+	protocol  string
+	baseName  string
 }
 
 // BuildNodeNamePlan renders node names in output order and applies duplicate indexes only when requested.
@@ -38,51 +35,66 @@ func BuildNodeNamePlan(nodes []Node, nodeNamePreprocess string, nodeNameRule str
 		SplitNames:  make([][]string, len(nodes)),
 		NodeNameMap: make(map[int]string, len(nodes)),
 	}
-	occurrences := make([]nodeNameOccurrence, 0, len(nodes))
+	rule, _ := compileNodeNameRule(nodeNameRule)
+	var occurrences []nodeNameOccurrence
+	var nameTotals map[string]int
+	var nodeInfos []utils.NodeInfo
+	if rule.duplicateIndex {
+		occurrences = make([]nodeNameOccurrence, 0, len(nodes))
+		nameTotals = make(map[string]int, len(nodes))
+		nodeInfos = make([]utils.NodeInfo, len(nodes))
+	}
 
 	for nodeIndex, node := range nodes {
-		processedLinkName := utils.PreprocessNodeName(nodeNamePreprocess, node.LinkName)
 		links := SplitNodeOutputLinks(node.Link)
 		plan.SplitNames[nodeIndex] = make([]string, len(links))
+		if rule.empty() {
+			name := node.EffectiveName()
+			for linkIndex := range links {
+				plan.setName(nodeIndex, linkIndex, node.ID, name)
+			}
+			continue
+		}
 
+		processedLinkName := utils.PreprocessNodeName(nodeNamePreprocess, node.LinkName)
+		info := BuildNodeRenameInfo(node, processedLinkName, "", nodeIndex+1, 0)
+		if rule.duplicateIndex {
+			nodeInfos[nodeIndex] = info
+		}
 		for linkIndex, link := range links {
-			protocolName := protocolFromLink(link)
+			info.Protocol = protocolFromLink(link)
+			name := rule.render(info)
+			if !rule.duplicateIndex {
+				plan.setName(nodeIndex, linkIndex, node.ID, name)
+				continue
+			}
+			nameTotals[name]++
 			occurrences = append(occurrences, nodeNameOccurrence{
-				node:              node,
-				nodeIndex:         nodeIndex,
-				linkIndex:         linkIndex,
-				link:              link,
-				processedLinkName: processedLinkName,
-				protocol:          protocolName,
-				baseName:          BuildNodeExportName(node, processedLinkName, nodeNameRule, protocolName, nodeIndex+1, 0),
+				nodeIndex: nodeIndex,
+				linkIndex: linkIndex,
+				protocol:  info.Protocol,
+				baseName:  name,
 			})
 		}
 	}
 
-	useDuplicateIndex := NodeNameRuleUsesDuplicateIndex(nodeNameRule)
-	nameTotals := make(map[string]int, len(occurrences))
-	if useDuplicateIndex {
-		for _, occurrence := range occurrences {
-			nameTotals[occurrence.baseName]++
-		}
+	if !rule.duplicateIndex {
+		return plan
 	}
-
 	nameIndexes := make(map[string]int, len(nameTotals))
 	for _, occurrence := range occurrences {
 		finalName := occurrence.baseName
-		if useDuplicateIndex && nameTotals[occurrence.baseName] > 1 {
+		if nameTotals[occurrence.baseName] > 1 {
 			duplicateIndex := nameIndexes[occurrence.baseName]
 			nameIndexes[occurrence.baseName]++
-			finalName = BuildNodeExportName(
-				occurrence.node,
-				occurrence.processedLinkName,
-				nodeNameRule,
-				occurrence.protocol,
-				occurrence.nodeIndex+1,
-				duplicateIndex,
-			)
+			if duplicateIndex > 0 {
+				info := nodeInfos[occurrence.nodeIndex]
+				info.Protocol = occurrence.protocol
+				info.DuplicateIndex = duplicateIndex
+				finalName = rule.render(info)
+			}
 		}
-		plan.setName(occurrence.nodeIndex, occurrence.linkIndex, occurrence.node.ID, finalName)
+		plan.setName(occurrence.nodeIndex, occurrence.linkIndex, nodes[occurrence.nodeIndex].ID, finalName)
 	}
 
 	return plan
@@ -90,15 +102,11 @@ func BuildNodeNamePlan(nodes []Node, nodeNamePreprocess string, nodeNameRule str
 
 // BuildNodeExportName renders one node name with the current rename variables.
 func BuildNodeExportName(node Node, processedLinkName string, nodeNameRule string, protocolName string, index int, duplicateIndex int) string {
-	if nodeNameRule == "" {
+	rule, _ := compileNodeNameRule(nodeNameRule)
+	if rule.empty() {
 		return node.EffectiveName()
 	}
-	return utils.RenameNode(nodeNameRule, BuildNodeRenameInfo(node, processedLinkName, protocolName, index, duplicateIndex))
-}
-
-// NodeNameRuleUsesDuplicateIndex reports whether the rename rule opts into duplicate numbering.
-func NodeNameRuleUsesDuplicateIndex(nodeNameRule string) bool {
-	return strings.Contains(nodeNameRule, duplicateIndexVariable)
+	return rule.render(BuildNodeRenameInfo(node, processedLinkName, protocolName, index, duplicateIndex))
 }
 
 // NodeNameAt returns the planned primary output name for a node occurrence.

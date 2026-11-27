@@ -2577,7 +2577,34 @@
       "categories": {
         "basic": "基础变量",
         "quality": "质量变量",
-        "unlock": "解锁变量"
+        "unlock": "解锁结果"
+      },
+      "serviceMarks": {
+        "title": "解锁标记",
+        "add": "添加解锁标记",
+        "hint": "命中所选状态时显示简称。",
+        "addService": "选择要显示的服务",
+        "label": "显示简称",
+        "statuses": "这些状态下显示",
+        "displayOptions": "显示选项",
+        "region": "显示地区后缀",
+        "prefix": "标记前缀",
+        "separator": "标记之间的分隔符",
+        "suffix": "标记后缀",
+        "moveUp": "上移 {{service}}",
+        "moveDown": "下移 {{service}}",
+        "remove": "移除 {{service}}",
+        "done": "完成",
+        "samplePreview": "示例预览",
+        "errors": {
+          "syntax": "第 {{block}} 个解锁标记格式无效。",
+          "services": "请为第 {{block}} 个解锁标记选择至少一个服务。",
+          "provider": "第 {{block}} 个解锁标记有一项缺少服务。",
+          "duplicate": "第 {{block}} 个解锁标记中重复选择了 {{provider}}。",
+          "label": "请填写第 {{block}} 个解锁标记中 {{provider}} 的简称。",
+          "statuses": "请为第 {{block}} 个解锁标记中的 {{provider}} 选择至少一个有效状态。",
+          "text": "第 {{block}} 个解锁标记的显示文本不能包含 ASCII 逗号、等号或控制字符。"
+        }
       },
       "vars": {
         "protocol": "协议",

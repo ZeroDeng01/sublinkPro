@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"sublink/dto"
@@ -147,6 +148,16 @@ func SubGet(c *gin.Context) {
 	utils.OkDetailed(c, "node get", Subs)
 }
 
+func validateSubscriptionNodeNameRule(c *gin.Context, rule string) bool {
+	invalid := models.ValidateNodeNameRule(rule)
+	if invalid == nil {
+		return true
+	}
+	utils.FailWithCodeI18n(c, http.StatusBadRequest, "节点命名规则中的解锁标记配置无效", "subscriptions.rename.serviceMarks.errors."+invalid.Reason,
+		map[string]any{"block": invalid.Block, "provider": invalid.Provider})
+	return false
+}
+
 // 添加节点
 func SubAdd(c *gin.Context) {
 	var sub models.Subcription
@@ -169,6 +180,9 @@ func SubAdd(c *gin.Context) {
 	countryWhitelist := c.PostForm("CountryWhitelist")
 	countryBlacklist := c.PostForm("CountryBlacklist")
 	nodeNameRule := c.PostForm("NodeNameRule")
+	if !validateSubscriptionNodeNameRule(c, nodeNameRule) {
+		return
+	}
 	nodeNamePreprocess := c.PostForm("NodeNamePreprocess")
 	nodeNameWhitelist := c.PostForm("NodeNameWhitelist")
 	nodeNameBlacklist := c.PostForm("NodeNameBlacklist")
@@ -373,6 +387,9 @@ func SubUpdate(c *gin.Context) {
 	countryWhitelist := c.PostForm("CountryWhitelist")
 	countryBlacklist := c.PostForm("CountryBlacklist")
 	nodeNameRule := c.PostForm("NodeNameRule")
+	if !validateSubscriptionNodeNameRule(c, nodeNameRule) {
+		return
+	}
 	nodeNamePreprocess := c.PostForm("NodeNamePreprocess")
 	nodeNameWhitelist := c.PostForm("NodeNameWhitelist")
 	nodeNameBlacklist := c.PostForm("NodeNameBlacklist")

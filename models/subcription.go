@@ -125,6 +125,13 @@ type NodeWithSort struct {
 	Sort int `json:"Sort"`
 }
 
+func (node NodeWithSort) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		nodeJSONResponse
+		Sort int `json:"Sort"`
+	}{nodeJSONResponse: node.jsonResponse(), Sort: node.Sort})
+}
+
 // InitSubcriptionCache 初始化订阅缓存
 func InitSubcriptionCache() error {
 	utils.Info("开始加载订阅到缓存")
@@ -1455,6 +1462,24 @@ type PreviewNode struct {
 	PreviewLink  string `json:"PreviewLink"`  // 预览链接（应用重命名后）
 	Protocol     string `json:"Protocol"`     // 协议类型
 	CountryFlag  string `json:"CountryFlag"`  // 国旗 emoji
+}
+
+func (node PreviewNode) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		nodeJSONResponse
+		OriginalName string `json:"OriginalName"`
+		PreviewName  string `json:"PreviewName"`
+		PreviewLink  string `json:"PreviewLink"`
+		Protocol     string `json:"Protocol"`
+		CountryFlag  string `json:"CountryFlag"`
+	}{
+		nodeJSONResponse: node.jsonResponse(),
+		OriginalName:     node.OriginalName,
+		PreviewName:      node.PreviewName,
+		PreviewLink:      node.PreviewLink,
+		Protocol:         node.Protocol,
+		CountryFlag:      node.CountryFlag,
+	})
 }
 
 // PreviewResult 预览结果结构体

@@ -31,7 +31,9 @@ import useResolvedColorScheme from 'hooks/useResolvedColorScheme';
 import { withAlpha } from '../../../utils/colorUtils';
 import { getReadableTextTokens, getSurfaceTokens } from '../../../themes/surfaceTokens';
 import { getUnlockRenameVariables } from 'views/nodes/utils';
-import { parseNodeRenameRule } from './nodeRenameRuleUtils';
+import { parseNodeRenameRule, previewNodeRenameItems, updateServiceMarkAffixes } from './nodeRenameRuleUtils';
+import ServiceMarksEditor from './ServiceMarksEditor';
+import { createServiceMarks, editServiceMarks, formatServiceMarks, previewServiceMarks } from './serviceMarks';
 
 const AVAILABLE_VARIABLES = [
   { key: '$Protocol', labelKey: 'subscriptions.rename.vars.protocol', color: '#9c27b0', descKey: 'subscriptions.rename.vars.protocolDesc' },
@@ -129,34 +131,11 @@ const getStableAccentFromKey = (key, palette) => {
   return palette[hash % palette.length];
 };
 
-const PREVIEW_DATA = {
-  $Protocol: 'VMess',
-  $LinkCountry: 'HK',
-  $LinkCountryName: '香港',
-  $Flag: '🇭🇰',
-  $Name: 'HK-Node-Remark',
-  $LinkName: 'HK-01',
-  $SpeedIcon: '🟢',
-  $Speed: '12.5MB/s',
-  $DelayIcon: '🟡',
-  $Delay: '125ms',
-  $IpType: 'Native',
-  $Residential: 'Residential',
-  $FraudScoreIcon: '🟢',
-  $FraudScore: '15',
-  $Unlock: 'Netflix-US',
-  $Group: 'VIP',
-  $Source: 'ProviderA',
-  $Index: '01',
-  $DuplicateIndex: '1',
-  $Tags: 'Fast|HK'
-};
-
-/**
- */
 const buildRule = (items) => {
   return items.map((item) => item.value).join('');
 };
+
+const markOptions = 'subscriptions.rename.serviceMarks';
 
 /**
  */
@@ -223,6 +202,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
   const [ruleItems, setRuleItems] = useState([]);
   const [customSeparator, setCustomSeparator] = useState('');
   const [idCounter, setIdCounter] = useState(0);
+  const [marksEditor, setMarksEditor] = useState(null);
 
   const [tagGroupDialogOpen, setTagGroupDialogOpen] = useState(false);
   const [tagGroups, setTagGroups] = useState([]);
@@ -312,13 +292,15 @@ export default function NodeRenameBuilder({ value, onChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const syncRule = useCallback(
-    (items) => {
-      const rule = buildRule(items);
-      onChange(rule);
-    },
-    [onChange]
-  );
+  const syncItems = (items, editingId = marksEditor?.id) => {
+    const ordered = updateServiceMarkAffixes(ruleItems, items);
+    setRuleItems(ordered);
+    onChange(buildRule(ordered));
+    if (editingId) {
+      const edited = ordered.find((item) => item.id === editingId);
+      setMarksEditor(edited ? { id: edited.id, marks: edited.marks } : null);
+    }
+  };
 
   const openTagGroupDialog = async () => {
     setTagGroupDialogOpen(true);
@@ -338,9 +320,8 @@ export default function NodeRenameBuilder({ value, onChange }) {
     const varValue = `$TagGroup(${groupName})`;
     const newItem = { id: `var-${idCounter}`, type: 'variable', value: varValue };
     const newItems = [...ruleItems, newItem];
-    setRuleItems(newItems);
+    syncItems(newItems);
     setIdCounter(idCounter + 1);
-    syncRule(newItems);
     setTagGroupDialogOpen(false);
   };
 
@@ -351,30 +332,47 @@ export default function NodeRenameBuilder({ value, onChange }) {
     }
     const newItem = { id: `var-${idCounter}`, type: 'variable', value: varKey };
     const newItems = [...ruleItems, newItem];
-    setRuleItems(newItems);
+    syncItems(newItems);
     setIdCounter(idCounter + 1);
-    syncRule(newItems);
   };
 
   const handleAddSeparator = (sep) => {
     if (!sep) return;
     const newItem = { id: `sep-${idCounter}`, type: 'separator', value: sep };
     const newItems = [...ruleItems, newItem];
-    setRuleItems(newItems);
+    syncItems(newItems);
     setIdCounter(idCounter + 1);
-    syncRule(newItems);
     setCustomSeparator('');
   };
 
   const handleRemoveItem = (itemId) => {
     const newItems = ruleItems.filter((item) => item.id !== itemId);
-    setRuleItems(newItems);
-    syncRule(newItems);
+    syncItems(newItems);
   };
 
   const handleClearAll = () => {
-    setRuleItems([]);
-    syncRule([]);
+    syncItems([]);
+    setMarksEditor(null);
+  };
+
+  const updateMarks = (marks) => {
+    if (marks.services.length === 0) {
+      syncItems(ruleItems.filter((item) => item.id !== marksEditor.id));
+      setMarksEditor({ id: null, marks });
+      return;
+    }
+
+    const id = marksEditor.id ?? `var-${idCounter}`;
+    const item = { id, type: 'serviceMarks', marks, value: formatServiceMarks(marks) };
+    let items;
+    if (marksEditor.id) {
+      items = ruleItems.map((existing) => (existing.id === id ? item : existing));
+    } else {
+      const baseItems = ruleItems.length ? ruleItems : [{ id: `var-${idCounter + 1}`, type: 'variable', value: '$Name' }];
+      items = [...baseItems, item];
+      setIdCounter(idCounter + 2);
+    }
+    syncItems(items, id);
   };
 
   const onDragEnd = (result) => {
@@ -384,8 +382,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    setRuleItems(items);
-    syncRule(items);
+    syncItems(items);
   };
 
   const getVariableColor = (varKey) => {
@@ -406,24 +403,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
 
   const getVariableTone = (varKey) => getAccentTone(getVariableColor(varKey));
 
-  const preview = ruleItems
-    .map((item) => {
-      if (item.type === 'variable') {
-        const tagGroupMatch = item.value.match(/\$TagGroup\(([^)]+)\)/);
-        if (tagGroupMatch) {
-          return 'Fast';
-        }
-        if (item.value === '$Unlock') {
-          return PREVIEW_DATA.$Unlock;
-        }
-        if (item.value.startsWith('$Unlock(')) {
-          return PREVIEW_DATA[item.value] || 'Unlock-US';
-        }
-        return PREVIEW_DATA[item.value] || item.value;
-      }
-      return item.value;
-    })
-    .join('');
+  const preview = previewNodeRenameItems(ruleItems);
 
   return (
     <Box>
@@ -434,7 +414,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
         <Stack spacing={2.5}>
           {variableSections.map((section) => {
             const sectionVariables = availableVariables.filter((v) => v.section === section.key);
-            if (sectionVariables.length === 0) return null;
+            if (sectionVariables.length === 0 && section.key !== 'unlock') return null;
             return (
               <Box key={section.key}>
                 <Typography variant="caption" sx={{ color: secondaryText, fontWeight: 700, mb: 1, display: 'block' }}>
@@ -451,11 +431,40 @@ export default function NodeRenameBuilder({ value, onChange }) {
                     </Tooltip>
                   ))}
                 </Stack>
+                {section.key === 'unlock' && (
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                    spacing={1}
+                    sx={{ mt: 1.5 }}
+                  >
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<AddIcon />}
+                      onClick={() => setMarksEditor({ id: null, marks: createServiceMarks() })}
+                    >
+                      {t(`${markOptions}.add`)}
+                    </Button>
+                    <Typography variant="caption" sx={{ color: tertiaryText }}>
+                      {t(`${markOptions}.hint`)}
+                    </Typography>
+                  </Stack>
+                )}
               </Box>
             );
           })}
         </Stack>
       </Paper>
+
+      {marksEditor && (
+        <ServiceMarksEditor
+          marks={marksEditor.marks}
+          blockNumber={ruleItems.filter((item) => item.type === 'serviceMarks').findIndex((item) => item.id === marksEditor.id) + 1}
+          onChange={updateMarks}
+          onClose={() => setMarksEditor(null)}
+        />
+      )}
 
       <Paper elevation={0} sx={sectionPaperSx}>
         <Typography variant="subtitle2" sx={sectionHeaderSx}>
@@ -606,12 +615,31 @@ export default function NodeRenameBuilder({ value, onChange }) {
                           <Box
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            {...provided.dragHandleProps}
+                            {...(item.type !== 'serviceMarks' && provided.dragHandleProps)}
                             sx={{ display: 'inline-flex' }}
                           >
                             <Chip
-                              icon={<DragIndicatorIcon sx={{ fontSize: 16 }} />}
-                              label={item.type === 'variable' ? getVariableLabel(item.value) : `"${item.value}"`}
+                              icon={
+                                item.type === 'serviceMarks' ? (
+                                  <Box component="span" {...provided.dragHandleProps} sx={{ display: 'inline-flex' }}>
+                                    <DragIndicatorIcon sx={{ fontSize: 16 }} />
+                                  </Box>
+                                ) : (
+                                  <DragIndicatorIcon sx={{ fontSize: 16 }} />
+                                )
+                              }
+                              label={
+                                item.type === 'serviceMarks'
+                                  ? `${t(`${markOptions}.title`)}${previewServiceMarks(item.marks) ? ` ${previewServiceMarks(item.marks).trim()}` : ''}`
+                                  : item.type === 'variable'
+                                    ? getVariableLabel(item.value)
+                                    : `"${item.value}"`
+                              }
+                              onClick={
+                                item.type === 'serviceMarks'
+                                  ? () => setMarksEditor({ id: item.id, marks: editServiceMarks(item.marks) })
+                                  : undefined
+                              }
                               onDelete={() => handleRemoveItem(item.id)}
                               deleteIcon={<DeleteOutlineIcon sx={{ fontSize: 16 }} />}
                               sx={(() => {
@@ -681,7 +709,7 @@ export default function NodeRenameBuilder({ value, onChange }) {
           >
             <Stack direction="row" alignItems="center" spacing={1}>
               <Typography variant="body2" fontWeight={600}>
-                {t('common.preview')}:
+                {t(`${markOptions}.samplePreview`)}
               </Typography>
               <Typography
                 variant="body2"

@@ -73,6 +73,9 @@ func PreviewSubscriptionNodes(c *gin.Context) {
 	if req.SubscriptionID > 0 {
 		result, err = previewSavedSubscription(req.SubscriptionID)
 	} else {
+		if !validateSubscriptionNodeNameRule(c, req.NodeNameRule) {
+			return
+		}
 		result, err = previewFormSubscription(req)
 	}
 

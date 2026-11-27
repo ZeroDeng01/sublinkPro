@@ -391,10 +391,9 @@ export default function NodeTransferBox({
                             sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
                           />
                         }
-                        primaryTypographyProps={{
-                          noWrap: true,
-                          fontWeight: 500,
-                          sx: { maxWidth: '200px' }
+                        slotProps={{
+                          primary: { noWrap: true, fontWeight: 500, sx: { maxWidth: '200px' } },
+                          secondary: { component: 'div' }
                         }}
                         sx={{ maxWidth: '200px' }}
                       />
@@ -510,10 +509,9 @@ export default function NodeTransferBox({
                             sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
                           />
                         }
-                        primaryTypographyProps={{
-                          noWrap: true,
-                          fontWeight: 500,
-                          sx: { maxWidth: '200px' }
+                        slotProps={{
+                          primary: { noWrap: true, fontWeight: 500, sx: { maxWidth: '200px' } },
+                          secondary: { component: 'div' }
                         }}
                         sx={{ maxWidth: '200px' }}
                       />
